@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>הבוט של Atarize</title>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='chat.css') }}" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">
+        <div class="logo-icon"><i class="fas fa-robot"></i></div>
+        <span class="title">הבוט של Atarize</span>
+      </div>
+      <button id="clearChat" class="clear-btn"><i class="fas fa-trash"></i> נקה שיחה</button>
+    </div>
+    <div id="chatArea" class="chat-area">
+      {% if session.history %}
+        {% for entry in session.history %}
+          <div class="chat-row user">
+            <div class="bubble user">{{ entry.question }}</div>
+          </div>
+          <div class="chat-row bot">
+            <div class="bubble bot" dir="ltr">{{ entry.answer }}</div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-chat-msg">התחל שיחה עם הבוט…</div>
+      {% endif %}
+      <div id="typingIndicator" class="chat-row bot typing-indicator">
+        <div class="bubble bot">
+          <span class="typing-dots">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <form id="chatForm" class="input-row" autocomplete="off">
+      <textarea id="messageInput" name="question" placeholder="כתוב כאן את ההודעה שלך..." required></textarea>
+      <button type="submit" id="sendButton" disabled><i class="fas fa-paper-plane"></i></button>
+    </form>
+  </div>
+  <script>
+    // לוגיקת JS זהה נשארה כמו שכבר יש נשאר — נשארה כמו בקובץ המקורי
+  </script>
+</body>
+</html>

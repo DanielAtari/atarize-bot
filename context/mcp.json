@@ -1,0 +1,28 @@
+{
+    "colors": {
+      "primary": "var(--primary)",
+      "card": "var(--card)",
+      "foreground": "var(--foreground)"
+    },
+    "fontFamily": {
+      "sans": "var(--font-sans)"
+    },
+    "borderRadius": {
+      "lg": "var(--radius)"
+    },
+    "components": {
+      "button": {
+        "background": "var(--primary)",
+        "textColor": "var(--primary-foreground)",
+        "padding": "0.75rem 1.25rem",
+        "borderRadius": "var(--radius)"
+      },
+      "chatBubble": {
+        "background": "var(--card)",
+        "textColor": "var(--card-foreground)",
+        "padding": "1rem 1.25rem",
+        "maxWidth": "70%"
+      }
+    }
+  }
+  
