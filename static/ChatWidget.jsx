@@ -1,7 +1,6 @@
-const { useState, useRef, useEffect } = React;
+import React, { useState, useRef, useEffect } from 'react';
 
-// ChatWidget Component
-window.ChatWidget = () => {
+const ChatWidget = () => {
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -128,3 +127,5 @@ window.ChatWidget = () => {
     </div>
   );
 };
+
+export default ChatWidget;

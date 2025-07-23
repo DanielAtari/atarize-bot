@@ -1,4 +1,6 @@
-window.PricingSection = () => (
+import React from 'react';
+
+const PricingSection = () => (
   <section id="pricing" className="scroll-offset max-w-3xl mx-auto my-16 bg-card rounded-xl shadow-lg border border-border p-8 text-right">
     <h2 className="text-3xl font-bold mb-8">תמחור</h2>
     <h3 className="text-xl font-semibold mb-4">שלב ראשון: בניית הבוט</h3>
@@ -57,4 +59,6 @@ window.PricingSection = () => (
     </div>
     <div className="text-lg text-primary font-bold mt-6">📢 מבצע השקה: חודש ראשון חינם!</div>
   </section>
-); 
+);
+
+export default PricingSection; 

@@ -1,4 +1,6 @@
-window.AboutSection = () => (
+import React from 'react';
+
+const AboutSection = () => (
   <section id="about" className="scroll-offset max-w-3xl mx-auto my-16 bg-card rounded-xl shadow-lg border border-border p-8 text-right">
     <h2 className="text-3xl font-bold mb-8">על Atarize</h2>
     <p className="mb-4">Atarize היא פלטפורמה לבניית צ'אטבוטים חכמים ומותאמים אישית לעסקים בישראל. מבוסס GPT + Vector DB.</p>
@@ -32,4 +34,6 @@ window.AboutSection = () => (
       <li><b>תשלום?</b> הקמה + מנוי. אשראי/ביט/העברה</li>
     </ul>
   </section>
-); 
+);
+
+export default AboutSection; 

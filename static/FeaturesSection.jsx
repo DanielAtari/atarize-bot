@@ -1,4 +1,6 @@
-window.FeaturesSection = () => (
+import React from 'react';
+
+const FeaturesSection = () => (
   <section id="features" className="scroll-offset max-w-3xl mx-auto my-16 bg-card rounded-xl shadow-lg border border-border p-8 text-right">
     <h2 className="text-3xl font-bold mb-8">תכונות עיקריות</h2>
     <div className="overflow-x-auto">
@@ -38,4 +40,6 @@ window.FeaturesSection = () => (
       </table>
     </div>
   </section>
-); 
+);
+
+export default FeaturesSection; 

@@ -1,6 +1,6 @@
-const { useState } = React;
+import React, { useState } from 'react';
 
-window.ContactSection = () => {
+const ContactSection = () => {
   const [form, setForm] = useState({ full_name: '', phone: '', email: '' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -86,4 +86,6 @@ window.ContactSection = () => {
       )}
     </section>
   );
-}; 
+};
+
+export default ContactSection; 

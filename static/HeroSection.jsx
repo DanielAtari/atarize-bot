@@ -1,5 +1,6 @@
-// HeroSection Component
-window.HeroSection = () => {
+import React from 'react';
+
+const HeroSection = () => {
   return (
     <div className="flex flex-col justify-center space-y-6 lg:space-y-8 text-right items-end">
       <div className="space-y-4">
@@ -45,4 +46,6 @@ window.HeroSection = () => {
       </div>
     </div>
   );
-}; 
+};
+
+export default HeroSection; 
