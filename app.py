@@ -20,7 +20,7 @@ EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_TARGET = os.getenv("EMAIL_TARGET")
 
 # === הגדרת Flask === #
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static/dist", static_url_path="")
 app.secret_key = FLASK_SECRET_KEY
 app.permanent_session_lifetime = timedelta(minutes=30)
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'
@@ -129,7 +129,7 @@ def chat():
     return render_template("chat.html", answer=answer, history=session["history"])
 
 # === Landing Page Route === #
-@app.route("/landing")
+@app.route("/")
 def landing():
     return app.send_static_file("index.html")
 
