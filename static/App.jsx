@@ -1,16 +1,17 @@
-// Reference global components
-const HeroSection = window.HeroSection;
-const ChatWidget = window.ChatWidget;
-const FeaturesSection = window.FeaturesSection;
-const PricingSection = window.PricingSection;
-const AboutSection = window.AboutSection;
-const ContactSection = window.ContactSection;
+import React from 'react';
+import HeroSection from './HeroSection.jsx';
+import ChatWidget from './ChatWidget.jsx';
+import FeaturesSection from './FeaturesSection.jsx';
+import PricingSection from './PricingSection.jsx';
+import AboutSection from './AboutSection.jsx';
+import ContactSection from './ContactSection.jsx';
 
 const SectionDivider = () => (
   <div className="border-t border-muted my-12 w-full max-w-3xl mx-auto" />
 );
 
-// Fade-in/slide-up animation hook
+// Fade-in/slide-up animation hook   git add static/App.jsx
+
 function useFadeInOnScroll() {
   const ref = React.useRef();
   const [visible, setVisible] = React.useState(false);
