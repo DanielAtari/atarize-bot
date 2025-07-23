@@ -2,3 +2,5 @@ openai
 flask
 chromadb
 python-dotenv
+gunicorn
+
