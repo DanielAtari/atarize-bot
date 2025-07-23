@@ -112,7 +112,7 @@ def generate_answer(question):
     return completion.choices[0].message.content.strip()
 
 # === ראוט HTML רגיל === #
-@app.route("/", methods=["GET", "POST"])
+@app.route("/chat", methods=["GET", "POST"])
 def chat():
     if "history" not in session:
         session["history"] = []
@@ -130,7 +130,7 @@ def chat():
 
 # === Landing Page Route === #
 @app.route("/")
-def landing():
+def index():
     return app.send_static_file("index.html")
 
 # === API JSON === #
