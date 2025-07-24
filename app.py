@@ -37,8 +37,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 embedding_function = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
 chroma_client = PersistentClient(
     path=os.path.join(BASE_DIR, "chroma_db"),
-    settings={"chroma_db_impl": "duckdb+parquet", "persist_directory": os.path.join(BASE_DIR, "chroma_db")},
-    anonymized_telemetry=False
+    settings={"chroma_db_impl": "duckdb+parquet", "persist_directory": os.path.join(BASE_DIR, "chroma_db")}
 )
 collection = chroma_client.get_or_create_collection("atarize_demo", embedding_function=embedding_function)
 
