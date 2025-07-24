@@ -24,13 +24,13 @@ const ChatWidget = () => {
   // פונה לשרת Flask שלך לקבלת תשובה מהבוט
   const fetchBotReply = async (message) => {
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/chat", {
-        method: "POST",
+      const res = await fetch('/api/chat', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json"
+          'Content-Type': 'application/json',
         },
-        credentials: "include", // הכרחי כדי לאפשר העברת session
-        body: JSON.stringify({ question: message })
+        body: JSON.stringify({ message: message }),
+        credentials: 'include',
       });
 
       const data = await res.json();
