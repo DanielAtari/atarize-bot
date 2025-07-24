@@ -1,6 +1,8 @@
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify
 from openai import OpenAI
 from chromadb import PersistentClient
+from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+from chromadb.config import Settings
 from dotenv import load_dotenv
 from datetime import timedelta
 import os
@@ -30,15 +32,22 @@ CORS(app, resources={r"/api/*": {"origins": [
     "https://atarize-frontend.onrender.com"
 ]}}, supports_credentials=True)
 
-# === הגדרות Chroma ו-GPT === #
+# === הגדרות Chroma עם SentenceTransformer במקום HuggingFace ONNX === #
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-chroma_client = PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))
-collection = chroma_client.get_or_create_collection("atarize_demo")
+embedding_function = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+chroma_client = PersistentClient(
+    path=os.path.join(BASE_DIR, "chroma_db"),
+    settings={"chroma_db_impl": "duckdb+parquet", "persist_directory": os.path.join(BASE_DIR, "chroma_db")},
+    anonymized_telemetry=False
+)
+collection = chroma_client.get_or_create_collection("atarize_demo", embedding_function=embedding_function)
+
+# === לקוח GPT === #
 client = OpenAI(api_key=OPENAI_API_KEY)
 
+# === טעינת קבצים === #
 with open(os.path.join(BASE_DIR, "data", "system_prompt_atarize.txt"), encoding="utf-8") as f:
     system_prompt = f.read()
-
 with open(os.path.join(BASE_DIR, "data", "Atarize_bot_full_knowledge.json"), encoding="utf-8") as f:
     intents_data = json.load(f)
 intents = intents_data.get("intents", [])
@@ -91,7 +100,6 @@ def generate_answer(question):
             session["status"] = "interested"
             return intent.get("response", "אני כאן לעזור 😊")
 
-        # ניסיון לשלוף הקשר מ-Chroma
         try:
             results = collection.query(query_texts=[question], n_results=1)
             relevant_context = results["documents"][0][0] if results["documents"] else ""
@@ -117,7 +125,7 @@ def generate_answer(question):
         completion = client.chat.completions.create(
             model="gpt-4o",
             messages=history,
-            timeout=15  # <-- תוספת חשובה
+            timeout=15
         )
         return completion.choices[0].message.content.strip()
 
