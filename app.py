@@ -1,5 +1,3 @@
-# === קובץ app.py (משודרג עם סטטוס, זרימה חכמה ותמיכה בהקשר) ===
-
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify
 from openai import OpenAI
 from chromadb import PersistentClient
@@ -26,13 +24,13 @@ app.permanent_session_lifetime = timedelta(minutes=30)
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_SECURE'] = False
 
-
 CORS(app, resources={r"/api/*": {"origins": [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://atarize-frontend.onrender.com"
 ]}}, supports_credentials=True)
 
+# === הגדרות Chroma ו-GPT === #
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 chroma_client = PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))
 collection = chroma_client.get_or_create_collection("atarize_demo")
@@ -75,47 +73,59 @@ def detect_user_status(question):
         return "curious"
     return session.get("status", "new")
 
-# === דיאלוג עם GPT או INTENT === #
 def generate_answer(question):
-    if (
-        any(x in question for x in ["@", ".com", "email", "מייל"]) or
-        any(code in question for code in ["050", "051", "052", "053", "054", "055", "058", "059"]) or
-        "טלפון" in question or
-        "שם" in question
-    ):
-        send_email_notification(
-            subject="📬 ליד מהצ'אט – פרטי התקשרות התקבלו",
-            message=f"המשתמש כתב:\n\n{question}"
-        )
+    try:
+        if (
+            any(x in question for x in ["@", ".com", "email", "מייל"]) or
+            any(code in question for code in ["050", "051", "052", "053", "054", "055", "058", "059"]) or
+            "טלפון" in question or
+            "שם" in question
+        ):
+            send_email_notification(
+                subject="📬 ליד מהצ'אט – פרטי התקשרות התקבלו",
+                message=f"המשתמש כתב:\n\n{question}"
+            )
 
-    intent = detect_intent(question, intents)
-    if intent:
-        session["status"] = "interested"
-        return intent.get("response", "אני כאן לעזור 😊")
+        intent = detect_intent(question, intents)
+        if intent:
+            session["status"] = "interested"
+            return intent.get("response", "אני כאן לעזור 😊")
 
-    results = collection.query(query_texts=[question], n_results=1)
-    relevant_context = results["documents"][0][0] if results["documents"] else ""
+        # ניסיון לשלוף הקשר מ-Chroma
+        try:
+            results = collection.query(query_texts=[question], n_results=1)
+            relevant_context = results["documents"][0][0] if results["documents"] else ""
+        except Exception as e:
+            print(f"⚠️ שגיאה בשליפה מ-Chroma: {e}")
+            relevant_context = ""
 
-    full_system_prompt = f"""{system_prompt}
+        full_system_prompt = f"""{system_prompt}
 
 סטטוס שיחה: {session.get('status', 'new')}
 
 הקשר רלוונטי מתוך המסמכים:
 {relevant_context}
 """
-    history = [{"role": "system", "content": full_system_prompt}]
-    for entry in session["history"][-2:]:
-        history.append({"role": "user", "content": entry["question"]})
-        history.append({"role": "assistant", "content": entry["answer"]})
-    history.append({"role": "user", "content": question})
 
-    completion = client.chat.completions.create(
-        model="gpt-4o",
-        messages=history
-    )
-    return completion.choices[0].message.content.strip()
+        history = [{"role": "system", "content": full_system_prompt}]
+        for entry in session.get("history", [])[-2:]:
+            history.append({"role": "user", "content": entry["question"]})
+            history.append({"role": "assistant", "content": entry["answer"]})
+        history.append({"role": "user", "content": question})
 
-# === ראוט HTML רגיל === #
+        print(f"📤 שולח ל-GPT: {question}")
+        completion = client.chat.completions.create(
+            model="gpt-4o",
+            messages=history,
+            timeout=15  # <-- תוספת חשובה
+        )
+        return completion.choices[0].message.content.strip()
+
+    except Exception as e:
+        print(f"❌ שגיאה ביצירת תשובת GPT: {e}")
+        return "הייתה בעיה בעיבוד השאלה. נסה שוב מאוחר יותר."
+
+# === Routes === #
 @app.route("/chat", methods=["GET", "POST"])
 def chat():
     if "history" not in session:
@@ -132,25 +142,24 @@ def chat():
 
     return render_template("chat.html", answer=answer, history=session["history"])
 
-# === Landing Page Route === #
 @app.route("/")
 def index():
     return app.send_static_file("index.html")
 
-# === API JSON === #
 @app.route("/api/chat", methods=["POST", "OPTIONS"])
 def api_chat():
     if request.method == "OPTIONS":
         return '', 200
+
     if "history" not in session:
         session["history"] = []
         session["status"] = "new"
 
     data = request.get_json()
-    question = data.get("question", "")
-    if not question:
+    if not data or "question" not in data:
         return jsonify({"error": "No question provided"}), 400
 
+    question = data.get("question", "")
     session["status"] = detect_user_status(question)
     answer = generate_answer(question)
     session["history"].append({"question": question, "answer": answer})
@@ -166,6 +175,7 @@ def api_contact():
     email = data.get("email", "")
     if not (full_name and phone and email):
         return jsonify({"success": False, "error": "Missing fields"}), 400
+
     subject = "ליד חדש מהאתר"
     message = f"שם מלא: {full_name}\nטלפון: {phone}\nאימייל: {email}"
     try:
