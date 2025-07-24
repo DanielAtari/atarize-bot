@@ -27,15 +27,16 @@ const ChatWidget = () => {
       const apiUrl = window.location.hostname.includes('render')
         ? 'https://atarize-backend.onrender.com/api/chat'
         : '/api/chat';
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: message }),
-        credentials: 'include',
-      });
 
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ question: message }),
+          credentials: 'include',
+        });
+        
       const data = await res.json();
       return data.answer || "לא התקבלה תשובה 😕";
     } catch (err) {
