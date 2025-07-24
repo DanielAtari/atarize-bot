@@ -27,7 +27,11 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_SECURE'] = False
 
 
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}}, supports_credentials=True)
+CORS(app, resources={r"/api/*": {"origins": [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://atarize-frontend.onrender.com"
+]}}, supports_credentials=True)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 chroma_client = PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))

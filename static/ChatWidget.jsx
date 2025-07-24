@@ -24,7 +24,10 @@ const ChatWidget = () => {
   // פונה לשרת Flask שלך לקבלת תשובה מהבוט
   const fetchBotReply = async (message) => {
     try {
-      const res = await fetch('/api/chat', {
+      const apiUrl = window.location.hostname.includes('render')
+        ? 'https://atarize-backend.onrender.com/api/chat'
+        : '/api/chat';
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
