@@ -22,28 +22,33 @@ const ChatWidget = () => {
   }, [messages, loading]);
 
   // פונה לשרת Flask שלך לקבלת תשובה מהבוט
-  const fetchBotReply = async (message) => {
-    try {
-      const apiUrl = window.location.hostname.includes('render')
-        ? 'https://atarize-backend.onrender.com/api/chat'
-        : '/api/chat';
+// שולף תשובת בוט מהשרת (מותאם ל-local ול-production)
+const fetchBotReply = async (message) => {
+  try {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL
+      ? `${import.meta.env.VITE_API_BASE_URL}/api/chat`
+      : '/api/chat';
 
-        const res = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ question: message }),
-          credentials: 'include',
-        });
-        
-      const data = await res.json();
-      return data.answer || "לא התקבלה תשובה 😕";
-    } catch (err) {
-      console.error("שגיאה:", err);
-      return "הייתה בעיה בהתחברות לבוט. נסה שוב מאוחר יותר.";
-    }
-  };
+    // הדפסה לבדיקה:
+    console.log("API_URL:", apiUrl);
+
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ question: message }),
+      credentials: 'include', // שומר על session/cookies אם צריך
+    });
+
+    const data = await res.json();
+    return data.answer || "לא התקבלה תשובה 😕";
+
+  } catch (err) {
+    console.error("שגיאה:", err);
+    return "הייתה בעיה בהתחברות לבוט. נסה שוב מאוחר יותר.";
+  }
+};
 
   // שליחת הודעה
   const handleSendMessage = async (e) => {

@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify
 from openai import OpenAI
+import chromadb
 from chromadb import PersistentClient
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 from chromadb.config import Settings
@@ -35,12 +36,14 @@ CORS(app, resources={r"/api/*": {"origins": [
 # === הגדרות Chroma עם SentenceTransformer במקום HuggingFace ONNX === #
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 embedding_function = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
-chroma_client = PersistentClient(
-    path=os.path.join(BASE_DIR, "chroma_db"),
-    settings={"chroma_db_impl": "duckdb+parquet", "persist_directory": os.path.join(BASE_DIR, "chroma_db")}
+chroma_client = chromadb.Client(
+    Settings(persist_directory="chroma_db")
 )
-collection = chroma_client.get_or_create_collection("atarize_demo", embedding_function=embedding_function)
 
+# עכשיו זה יעבוד:
+collection = chroma_client.get_or_create_collection(
+    "atarize_demo", embedding_function=embedding_function
+)
 # === לקוח GPT === #
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -202,6 +205,8 @@ def clear_chat():
     session.pop("history", None)
     session.pop("status", None)
     return redirect(url_for("chat"))
-
+    
 if __name__ == "__main__":
-    app.run(debug=True, port=8000)
+    port = int(os.environ.get("PORT", 8000))  # ← כאן הטריק
+    app.run(host="0.0.0.0", debug=True, port=port)
+

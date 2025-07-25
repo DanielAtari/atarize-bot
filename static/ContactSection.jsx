@@ -16,8 +16,8 @@ const ContactSection = () => {
     setError('');
     setSuccess(false);
     try {
-      const apiUrl = window.location.hostname.includes('render')
-        ? 'https://atarize-backend.onrender.com/api/contact'
+      const apiUrl = import.meta.env.VITE_API_BASE_URL
+        ? `${import.meta.env.VITE_API_BASE_URL}/api/contact`
         : '/api/contact';
       const res = await fetch(apiUrl, {
         method: 'POST',
