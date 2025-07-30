@@ -106,8 +106,9 @@ def chat():
             else:
                 print("🔍 אין Intent — שולחים לשאילת GPT עם חיפוש הקשר")
                 # שליפת הקשר מ־Chroma
-                results = collection.query(query_texts=[question], n_results=1)
-                relevant_context = results["documents"][0][0] if results["documents"] else ""
+                results = collection.query(query_texts=[question], n_results=3)
+                relevant_context = "\n---\n".join(doc[0] for doc in results["documents"] if doc)
+                print("🔍 הקשר שהוחזר מה־Chroma:\n", relevant_context)
 
                 full_system_prompt = f"""{system_prompt}
 
@@ -175,8 +176,9 @@ def api_chat():
         else:
             print("🔍 אין Intent — שולחים לשאילת GPT עם חיפוש הקשר")
             # שליפת הקשר מ־Chroma
-            results = collection.query(query_texts=[question], n_results=1)
-            relevant_context = results["documents"][0][0] if results["documents"] else ""
+            results = collection.query(query_texts=[question], n_results=3)
+            relevant_context = "\n---\n".join(doc[0] for doc in results["documents"] if doc)
+            print("🔍 הקשר שהוחזר מה־Chroma:\n", relevant_context)
 
             full_system_prompt = f"""{system_prompt}
 
