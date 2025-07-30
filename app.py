@@ -1,9 +1,7 @@
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify
 from openai import OpenAI
-import chromadb
 from chromadb import PersistentClient
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
-from chromadb.config import Settings
 from dotenv import load_dotenv
 from datetime import timedelta
 import os
@@ -33,25 +31,27 @@ CORS(app, resources={r"/api/*": {"origins": [
     "https://atarize-frontend.onrender.com"
 ]}}, supports_credentials=True)
 
-# === הגדרות Chroma עם SentenceTransformer במקום HuggingFace ONNX === #
+# === הגדרות Chroma - תואמות לסקריפט הטעינה === #
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 embedding_function = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
-chroma_client = chromadb.Client(
-    Settings(persist_directory="chroma_db")
+
+# שימוש ב-PersistentClient כמו בסקריפט הטעינה
+chroma_client = PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))
+collection = chroma_client.get_or_create_collection(
+    "atarize_demo", 
+    embedding_function=embedding_function
 )
 
-# עכשיו זה יעבוד:
-collection = chroma_client.get_or_create_collection(
-    "atarize_demo", embedding_function=embedding_function
-)
 # === לקוח GPT === #
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # === טעינת קבצים === #
 with open(os.path.join(BASE_DIR, "data", "system_prompt_atarize.txt"), encoding="utf-8") as f:
     system_prompt = f.read()
+
 with open(os.path.join(BASE_DIR, "data", "Atarize_bot_full_knowledge.json"), encoding="utf-8") as f:
     intents_data = json.load(f)
+
 intents = intents_data.get("intents", [])
 
 # === פונקציות עזר === #
@@ -84,8 +84,46 @@ def detect_user_status(question):
         return "curious"
     return session.get("status", "new")
 
+def search_chromadb(question, n_results=3):
+    """חיפוש משופר ב-ChromaDB"""
+    try:
+        print(f"🔍 מחפש ב-ChromaDB: {question}")
+        
+        # ביצוע חיפוש
+        results = collection.query(
+            query_texts=[question], 
+            n_results=n_results
+        )
+        
+        # בדיקה שיש תוצאות
+        if not results or not results.get("documents") or not results["documents"][0]:
+            print("⚠️ לא נמצאו תוצאות ב-ChromaDB")
+            return ""
+        
+        # איחוד התוצאות
+        relevant_docs = results["documents"][0]
+        metadatas = results.get("metadatas", [[]])[0]
+        
+        # בניית הקשר רלוונטי
+        context_parts = []
+        for i, doc in enumerate(relevant_docs):
+            metadata = metadatas[i] if i < len(metadatas) else {}
+            doc_type = metadata.get("type", "מידע כללי")
+            context_parts.append(f"[{doc_type}] {doc}")
+        
+        context = "\n\n".join(context_parts)
+        print(f"✅ נמצאו {len(relevant_docs)} תוצאות ב-ChromaDB")
+        print(f"📄 הקשר: {context[:200]}...")
+        
+        return context
+        
+    except Exception as e:
+        print(f"❌ שגיאה בחיפוש ChromaDB: {e}")
+        return ""
+
 def generate_answer(question):
     try:
+        # בדיקת פרטי התקשרות
         if (
             any(x in question for x in ["@", ".com", "email", "מייל"]) or
             any(code in question for code in ["050", "051", "052", "053", "054", "055", "058", "059"]) or
@@ -97,43 +135,75 @@ def generate_answer(question):
                 message=f"המשתמש כתב:\n\n{question}"
             )
 
+        # בדיקת intents
         intent = detect_intent(question, intents)
         if intent:
             session["status"] = "interested"
             return intent.get("response", "אני כאן לעזור 😊")
 
-        try:
-            results = collection.query(query_texts=[question], n_results=1)
-            relevant_context = results["documents"][0][0] if results["documents"] else ""
-        except Exception as e:
-            print(f"⚠️ שגיאה בשליפה מ-Chroma: {e}")
-            relevant_context = ""
-
+        # חיפוש ב-ChromaDB
+        relevant_context = search_chromadb(question)
+        
+        # בניית prompt מלא
         full_system_prompt = f"""{system_prompt}
 
 סטטוס שיחה: {session.get('status', 'new')}
 
-הקשר רלוונטי מתוך המסמכים:
+הקשר רלוונטי מתוך בסיס הנתונים:
 {relevant_context}
+
+הוראות נוספות:
+- אם יש מידע רלוונטי בהקשר, השתמש בו כדי לענות בצורה מדויקת
+- אם אין מידע רלוונטי, ענה בהתבסס על הידע הכללי שלך על עסק הצ'אטבוטים
+- תמיד ענה בעברית ובצורה ידידותית
 """
 
+        # בניית היסטוריית השיחה
         history = [{"role": "system", "content": full_system_prompt}]
+        
+        # הוספת היסטוריה (רק 2 החלפות אחרונות)
         for entry in session.get("history", [])[-2:]:
             history.append({"role": "user", "content": entry["question"]})
             history.append({"role": "assistant", "content": entry["answer"]})
+        
+        # הוספת השאלה הנוכחית
         history.append({"role": "user", "content": question})
 
-        print(f"📤 שולח ל-GPT: {question}")
+        print(f"📤 שולח ל-GPT עם קונטקסט: {len(relevant_context)} תווים")
+        
+        # קבלת תשובה מ-GPT
         completion = client.chat.completions.create(
             model="gpt-4o",
             messages=history,
+            temperature=0.7,
+            max_tokens=1000,
             timeout=15
         )
-        return completion.choices[0].message.content.strip()
-
+        
+        answer = completion.choices[0].message.content.strip()
+        print(f"✅ תשובה מ-GPT: {answer[:100]}...")
+        
+        return answer
+        
     except Exception as e:
         print(f"❌ שגיאה ביצירת תשובת GPT: {e}")
         return "הייתה בעיה בעיבוד השאלה. נסה שוב מאוחר יותר."
+
+# === בדיקת חיבור ל-ChromaDB בעת הפעלה === #
+def test_chromadb_connection():
+    try:
+        count = collection.count()
+        print(f"🔌 חיבור ל-ChromaDB הצליח! מספר מסמכים: {count}")
+        
+        # בדיקת חיפוש פשוטה
+        test_results = collection.query(query_texts=["מחיר"], n_results=1)
+        if test_results and test_results.get("documents") and test_results["documents"][0]:
+            print("✅ בדיקת חיפוש הצליחה!")
+        else:
+            print("⚠️ בדיקת חיפוש נכשלה - אין מסמכים או בעיה בחיפוש")
+            
+    except Exception as e:
+        print(f"❌ בעיה בחיבור ל-ChromaDB: {e}")
 
 # === Routes === #
 @app.route("/chat", methods=["GET", "POST"])
@@ -141,7 +211,7 @@ def chat():
     if "history" not in session:
         session["history"] = []
         session["status"] = "new"
-
+    
     answer = ""
     if request.method == "POST":
         question = request.form.get("question")
@@ -149,7 +219,7 @@ def chat():
         answer = generate_answer(question)
         session["history"].append({"question": question, "answer": answer})
         session.modified = True
-
+    
     return render_template("chat.html", answer=answer, history=session["history"])
 
 @app.route("/")
@@ -160,21 +230,22 @@ def index():
 def api_chat():
     if request.method == "OPTIONS":
         return '', 200
-
+    
     if "history" not in session:
         session["history"] = []
         session["status"] = "new"
-
+    
     data = request.get_json()
     if not data or "question" not in data:
         return jsonify({"error": "No question provided"}), 400
-
+    
     question = data.get("question", "")
     session["status"] = detect_user_status(question)
     answer = generate_answer(question)
+    
     session["history"].append({"question": question, "answer": answer})
     session.modified = True
-
+    
     return jsonify({"answer": answer, "success": True})
 
 @app.route("/api/contact", methods=["POST"])
@@ -183,11 +254,13 @@ def api_contact():
     full_name = data.get("full_name", "")
     phone = data.get("phone", "")
     email = data.get("email", "")
+    
     if not (full_name and phone and email):
         return jsonify({"success": False, "error": "Missing fields"}), 400
-
+    
     subject = "ליד חדש מהאתר"
     message = f"שם מלא: {full_name}\nטלפון: {phone}\nאימייל: {email}"
+    
     try:
         send_email_notification(subject, message)
         return jsonify({"success": True})
@@ -205,8 +278,26 @@ def clear_chat():
     session.pop("history", None)
     session.pop("status", None)
     return redirect(url_for("chat"))
-    
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))  # ← כאן הטריק
-    app.run(host="0.0.0.0", debug=True, port=port)
 
+# נתיב לבדיקת מצב ChromaDB
+@app.route("/api/db-status")
+def db_status():
+    try:
+        count = collection.count()
+        return jsonify({
+            "success": True,
+            "documents_count": count,
+            "collection_name": "atarize_demo"
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+if __name__ == "__main__":
+    # בדיקת חיבור ל-ChromaDB בעת הפעלה
+    test_chromadb_connection()
+    
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", debug=True, port=port)
