@@ -8,7 +8,7 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 
 # אתחול Chroma
 chroma_client = PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))
-collection = chroma_client.get_or_create_collection("atarize_demo")
+collection = chroma_client.get_or_create_collection("atarize_knowledge")
 
 # מחיקת מסמכים קיימים (תואם לגרסאות החדשות)
 try:

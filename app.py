@@ -26,7 +26,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # === התחברות ל־ChromaDB === #
 chroma_client = PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))
-collection = chroma_client.get_or_create_collection("atarize_demo")
+collection = chroma_client.get_or_create_collection("atarize_knowledge")
 
 # === חיבור ל־OpenAI === #
 client = OpenAI(api_key=OPENAI_API_KEY)
