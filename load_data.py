@@ -10,9 +10,9 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 chroma_client = PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))
 collection = chroma_client.get_or_create_collection("atarize_knowledge")
 
-# מחיקת מסמכים קיימים (תואם לגרסאות החדשות)
+# מחיקת מסמכים קיימים
 try:
-    collection.delete(where={"source": {"$ne": None}})
+    collection.delete(where={})
     print("✅ כל המסמכים הקיימים נמחקו מה-collection.")
 except Exception as e:
     print(f"שגיאה במחיקת המסמכים: {e}")
@@ -27,7 +27,7 @@ if not os.path.isfile(json_path):
 with open(json_path, encoding="utf-8") as f:
     data = json.load(f)
 
-# פונקציה להוספת מסמך ל-Chromaß
+# פונקציה להוספת מסמך ל-Chroma
 def add_doc(text, doc_id, metadata):
     collection.add(
         documents=[text],
@@ -36,117 +36,35 @@ def add_doc(text, doc_id, metadata):
     )
     print(f"✅ נוסף: {doc_id}")
 
-doc_counter = 1
-
-# BENEFITS
-for benefit in data.get("benefits", []):
-    add_doc(
-        text=benefit,
-        doc_id=f"benefit_{doc_counter}",
-        metadata={
-            "type": "benefit",
-            "language": data["language"],
-            "source": data["business_name"]
-        }
-    )
-    doc_counter += 1
-
-# FEATURES
-for feature in data.get("features", []):
-    add_doc(
-        text=feature,
-        doc_id=f"feature_{doc_counter}",
-        metadata={
-            "type": "feature",
-            "language": data["language"],
-            "source": data["business_name"]
-        }
-    )
-    doc_counter += 1
-
-# FAQ
-for i, faq in enumerate(data.get("faq", []), start=1):
-    text = f"שאלה: {faq['q']}\nתשובה: {faq['a']}"
+# טעינת הידע מהחלק knowledge
+for item in data.get("knowledge", []):
+    # בחר פה איזה טקסט להוסיף, למשל את התשובה בעברית
+    text = f"שאלה: {item.get('question_he', '')}\nתשובה: {item.get('answer_he', '')}"
+    language = item.get("language", [])
+    if isinstance(language, list):
+        language = ",".join(language)
     add_doc(
         text=text,
-        doc_id=f"faq_{i}",
+        doc_id=item.get("id", ""),
         metadata={
-            "type": "faq",
-            "language": data["language"],
-            "source": data["business_name"]
+            "intent": item.get("intent", ""),
+            "language": language,
+            "source": "Atarize"
         }
     )
 
-# OBJECTIONS
-for i, obj in enumerate(data.get("common_objections", []), start=1):
-    text = f"התנגדות: {obj['question']}\nתגובה: {obj['response']}"
+# טעינת ה-intents כקטגוריית מסמכים נוספת
+for intent in data.get("intents", []):
+    text = intent.get("response", "")
     add_doc(
         text=text,
-        doc_id=f"objection_{i}",
-        metadata={
-            "type": "objection",
-            "language": data["language"],
-            "source": data["business_name"]
-        }
-    )
-
-# PROCESS STEPS
-for step in data.get("process_steps", []):
-    add_doc(
-        text=step,
-        doc_id=f"process_step_{doc_counter}",
-        metadata={
-            "type": "process_step",
-            "language": data["language"],
-            "source": data["business_name"]
-        }
-    )
-    doc_counter += 1
-
-# PRICING (סיכום כללי)
-pricing = data.get("pricing", {})
-pricing_text = f"""מחיר הקמה: {pricing.get('setup')}
-הטמעה (אם דרושה): {pricing.get('deployment')}
-הטמעה בידע: {pricing.get('embedding')}
-חודש ניסיון: {pricing.get('trial')}
-אפשרויות תשלום: {', '.join(pricing.get('payment_methods', []))}"""
-add_doc(
-    text=pricing_text,
-    doc_id="pricing_summary",
-    metadata={
-        "type": "pricing",
-        "language": data["language"],
-        "source": data["business_name"]
-    }
-)
-
-# PRICING PLANS
-for plan, details in pricing.get("monthly_plans", {}).items():
-    text = f"חבילת {plan}:\nהודעות: {details['limit']}\nמחיר: {details['price']}"
-    add_doc(
-        text=text,
-        doc_id=f"pricing_{plan.lower()}",
-        metadata={
-            "type": "pricing_plan",
-            "plan": plan,
-            "language": data["language"],
-            "source": data["business_name"]
-        }
-    )
-
-# INTENT DETECTION
-intent = data.get("intent_detection", {}).get("interested_lead")
-if intent:
-    text = f"כוונת ליד מתעניין:\n{intent['description']}\nפעולה: {intent['action']}"
-    add_doc(
-        text=text,
-        doc_id="intent_interested_lead",
+        doc_id=f"intent_{intent.get('name', '')}",
         metadata={
             "type": "intent",
-            "intent": "interested_lead",
-            "language": data["language"],
-            "source": data["business_name"]
+            "intent": intent.get("name", ""),
+            "language": "he",  # אפשר לשנות אם יש יותר שפות
+            "source": "Atarize"
         }
     )
 
-print("🎉 כל הידע הועלה בהצלחה ל־Chroma!")
+print("🎉 כל הידע וה-intents הועלו בהצלחה ל־Chroma!")
