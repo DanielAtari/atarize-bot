@@ -70,88 +70,14 @@ def send_email_notification(subject, message):
     except Exception as e:
         print(f"❌ שגיאה בשליחת המייל: {e}")
 
-# === ראוט ראשי לצ׳אט === #
-@app.route("/", methods=["GET", "POST"])
-def chat():
-    answer = ""
-    if "history" not in session:
-        session["history"] = []
-
-    if request.method == "POST":
-        question = request.form.get("question")
-        print(f"\n🟢 שאלה מהמשתמש: {question}")
-
-        # שלב 1: אם מחכים לפרטים, נבדוק אם הם נשלחו
-        if session.get("interested_lead_pending"):
-            print("📌 מחכים לפרטי ליד...")
-            if any(x in question for x in ["@", ".com", "050", "052", "טלפון", "מייל", "שם"]):
-                print("📥 זיהינו ניסיון לשלוח פרטים, שולח התראה במייל")
-                send_email_notification(
-                    subject="💬 פרטי ליד חם התקבלו מהבוט",
-                    message=f"המשתמש השאיר פרטים:\n\n{question}"
-                )
-                session.pop("interested_lead_pending")
-                answer = "תודה רבה! קיבלנו את הפרטים ונחזור אליך בהקדם 😊"
-            else:
-                answer = "רק תוודא ששלחת גם שם, טלפון ומייל 🙏"
-        else:
-            # זיהוי intent
-            intent = detect_intent(question, intents)
-            if intent:
-                print(f"✅ Intent מזוהה: {intent.get('name')}")
-                answer = intent.get("response", "אני כאן לעזור 😊")
-                if intent.get("name") == "interested_lead":
-                    print("🟡 ממתינים לפרטים מהמשתמש...")
-                    session["interested_lead_pending"] = True
-            else:
-                print("🔍 אין Intent — שולחים לשאילת GPT עם חיפוש הקשר")
-                # שליפת הקשר מ־Chroma
-                results = collection.query(query_texts=[question], n_results=3)
-                relevant_context = "\n---\n".join(doc[0] for doc in results["documents"] if doc)
-                print("🔍 הקשר שהוחזר מה־Chroma:\n", relevant_context)
-
-                full_system_prompt = f"""{system_prompt}
-
-הקשר רלוונטי מתוך המסמכים:
-{relevant_context}
-"""
-                # בניית היסטוריית שיחה
-                history = [{"role": "system", "content": full_system_prompt}]
-                for entry in session["history"]:
-                    history.append({"role": "user", "content": entry["question"]})
-                    history.append({"role": "assistant", "content": entry["answer"]})
-                history.append({"role": "user", "content": question})
-
-                # שליחת GPT
-                completion = client.chat.completions.create(
-                    model="gpt-4",
-                    messages=history
-                )
-                answer = completion.choices[0].message.content.strip()
-
-        # עדכון היסטוריה
-        session["history"].append({"question": question, "answer": answer})
-        session.modified = True
-
-    return render_template("chat.html", answer=answer, history=session.get("history", []))
-
-# === JSON endpoint for AJAX requests === #
-@app.route("/api/chat", methods=["POST"])
-def api_chat():
-    from flask import jsonify
-    
-    if "history" not in session:
-        session["history"] = []
-    
-    data = request.get_json()
-    question = data.get("question", "")
-    
-    if not question:
-        return jsonify({"error": "No question provided"}), 400
-    
-    print(f"\n🟢 שאלה מהמשתמש (API): {question}")
-    
-    # שלב 1: אם מחכים לפרטים, נבדוק אם הם נשלחו
+def handle_question(question, session, intents, collection, system_prompt, client):
+    """
+    Handles a user question: detects intent, retrieves context from Chroma, and gets a GPT response if needed.
+    Returns: answer, updated session (dict), and a flag if interested_lead_pending was set/cleared.
+    """
+    answer = None
+    interested_lead_pending_changed = False
+    # 1. If waiting for lead details
     if session.get("interested_lead_pending"):
         print("📌 מחכים לפרטי ליד...")
         if any(x in question for x in ["@", ".com", "050", "052", "טלפון", "מייל", "שם"]):
@@ -162,10 +88,11 @@ def api_chat():
             )
             session.pop("interested_lead_pending")
             answer = "תודה רבה! קיבלנו את הפרטים ונחזור אליך בהקדם 😊"
+            interested_lead_pending_changed = True
         else:
             answer = "רק תוודא ששלחת גם שם, טלפון ומייל 🙏"
     else:
-        # זיהוי intent
+        # 2. Intent detection
         intent = detect_intent(question, intents)
         if intent:
             print(f"✅ Intent מזוהה: {intent.get('name')}")
@@ -173,36 +100,57 @@ def api_chat():
             if intent.get("name") == "interested_lead":
                 print("🟡 ממתינים לפרטים מהמשתמש...")
                 session["interested_lead_pending"] = True
+                interested_lead_pending_changed = True
         else:
             print("🔍 אין Intent — שולחים לשאילת GPT עם חיפוש הקשר")
-            # שליפת הקשר מ־Chroma
+            # 3. Retrieve context from Chroma
             results = collection.query(query_texts=[question], n_results=3)
             relevant_context = "\n---\n".join(doc[0] for doc in results["documents"] if doc)
             print("🔍 הקשר שהוחזר מה־Chroma:\n", relevant_context)
-
-            full_system_prompt = f"""{system_prompt}
-
-הקשר רלוונטי מתוך המסמכים:
-{relevant_context}
-"""
-            # בניית היסטוריית שיחה
+            # 4. Build system prompt with context
+            full_system_prompt = f"""{system_prompt}\n\nהקשר רלוונטי מתוך המסמכים:\n{relevant_context}\n"""
+            # 5. Build chat history
             history = [{"role": "system", "content": full_system_prompt}]
             for entry in session["history"]:
                 history.append({"role": "user", "content": entry["question"]})
                 history.append({"role": "assistant", "content": entry["answer"]})
             history.append({"role": "user", "content": question})
-
-            # שליחת GPT
+            # 6. Call GPT
             completion = client.chat.completions.create(
                 model="gpt-4",
                 messages=history
             )
             answer = completion.choices[0].message.content.strip()
+    return answer, session, interested_lead_pending_changed
 
-    # עדכון היסטוריה
+# === ראוט ראשי לצ׳אט === #
+@app.route("/", methods=["GET", "POST"])
+def chat():
+    answer = ""
+    if "history" not in session:
+        session["history"] = []
+    if request.method == "POST":
+        question = request.form.get("question")
+        print(f"\n🟢 שאלה מהמשתמש: {question}")
+        answer, session, _ = handle_question(question, session, intents, collection, system_prompt, client)
+        session["history"].append({"question": question, "answer": answer})
+        session.modified = True
+    return render_template("chat.html", answer=answer, history=session.get("history", []))
+
+# === JSON endpoint for AJAX requests === #
+@app.route("/api/chat", methods=["POST"])
+def api_chat():
+    from flask import jsonify
+    if "history" not in session:
+        session["history"] = []
+    data = request.get_json()
+    question = data.get("question", "")
+    if not question:
+        return jsonify({"error": "No question provided"}), 400
+    print(f"\n🟢 שאלה מהמשתמש (API): {question}")
+    answer, session, _ = handle_question(question, session, intents, collection, system_prompt, client)
     session["history"].append({"question": question, "answer": answer})
     session.modified = True
-    
     return jsonify({
         "answer": answer,
         "success": True
