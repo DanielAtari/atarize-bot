@@ -10,7 +10,6 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 chroma_client = PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))
 collection = chroma_client.get_or_create_collection("atarize_demo")
 
-
 # מחיקת מסמכים קיימים (תואם לגרסאות החדשות)
 try:
     collection.delete(where={"source": {"$ne": None}})
