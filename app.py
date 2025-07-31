@@ -67,8 +67,10 @@ def send_email_notification(subject, message):
             server.send_message(msg)
 
         print("✅ מייל נשלח בהצלחה!")
+        return True
     except Exception as e:
         print(f"❌ שגיאה בשליחת המייל: {e}")
+        return False
 
 def handle_question(question, session, intents, collection, system_prompt, client):
     answer = None
@@ -146,6 +148,22 @@ def clear_chat():
     session_data.pop("history", None)
     session_data.pop("interested_lead_pending", None)
     return redirect(url_for("chat"))
+
+@app.route("/api/contact", methods=["POST"])
+def api_contact():
+    data = request.get_json()
+    full_name = data.get("full_name")
+    phone = data.get("phone")
+    email = data.get("email")
+    if not (full_name and phone and email):
+        return jsonify({"success": False, "message": "Missing required fields."}), 400
+    subject = "📝 ליד חדש מהאתר (טופס צור קשר)"
+    body = f"שם מלא: {full_name}\nטלפון: {phone}\nאימייל: {email}"
+    success = send_email_notification(subject, body)
+    if success:
+        return jsonify({"success": True, "message": "Contact details sent successfully!"}), 200
+    else:
+        return jsonify({"success": False, "message": "Failed to send contact details."}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5050, debug=True)
