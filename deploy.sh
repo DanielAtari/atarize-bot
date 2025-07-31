@@ -9,10 +9,8 @@ echo "📥 מושך עדכונים מגיטהאב..."
 git pull
 
 echo "🔧 בונה את הפרונטאנד..."
-cd static
 npm install
 npm run build
-cd ..
 
 echo "🚀 מאתחל את Gunicorn..."
 systemctl restart gunicorn

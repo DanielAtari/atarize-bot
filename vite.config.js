@@ -1,12 +1,8 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
 export default defineConfig({
-    root: 'static',
-    build: {
-      outDir: 'dist',
-      emptyOutDir: true,
-    },
-    plugins: [react()],
-  })
-  
+  root: '.', // הפוך את שורש הפרויקט לשורש הפרונטאנד
+  build: {
+    outDir: 'static/dist', // תכתוב את ה-build לתוך static/dist
+    emptyOutDir: true,
+  },
+  plugins: [react()],
+});
