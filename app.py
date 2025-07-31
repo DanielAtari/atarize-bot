@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template, session, redirect, url_for
 from openai import OpenAI
-from chromadb import PersistentClient
+from chromadb import HttpClient
 from dotenv import load_dotenv
 from datetime import timedelta
 import os
@@ -25,7 +25,7 @@ app.permanent_session_lifetime = timedelta(minutes=30)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # === התחברות ל־ChromaDB === #
-chroma_client = PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))
+chroma_client = HttpClient(host="localhost", port=8000)
 collection = chroma_client.get_or_create_collection("atarize_knowledge")
 
 # === חיבור ל־OpenAI === #
