@@ -57,19 +57,7 @@ for item in data.get("data", []):
         }
     )
 
-# טעינת ה-intents כקטגוריית מסמכים נוספת
-for intent in data.get("intents", []):
-    text = intent.get("response", "")
-    add_doc(
-        text=text,
-        doc_id=f"intent_{intent.get('name', '')}",
-        metadata={
-            "type": "intent",
-            "intent": intent.get("name", ""),
-            "language": "he",
-            "source": "Atarize"
-        }
-    )
+
 
 print("🎉 כל הידע וה-intents הועלו בהצלחה ל־Chroma!")
 print("📦 מספר פריטים:", collection.count())

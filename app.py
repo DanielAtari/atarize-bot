@@ -72,7 +72,7 @@ def send_email_notification(subject, message):
         print(f"❌ שגיאה בשליחת המייל: {e}")
         return False
 
-def handle_question(question, session, intents, collection, system_prompt, client):
+def handle_question(question, session, collection, system_prompt, client):
     answer = None
     interested_lead_pending_changed = False
     if session.get("interested_lead_pending"):
@@ -89,30 +89,21 @@ def handle_question(question, session, intents, collection, system_prompt, clien
         else:
             answer = "רק תוודא ששלחת גם שם, טלפון ומייל \U0001f64f"
     else:
-        intent = detect_intent(question, intents)
-        if intent:
-            print(f"✅ Intent מזוהה: {intent.get('name')}")
-            answer = intent.get("response", "אני כאן לעזור \U0001f60a")
-            if intent.get("name") == "interested_lead":
-                print("\U0001f7e1 ממתינים לפרטים מהמשתמש...")
-                session["interested_lead_pending"] = True
-                interested_lead_pending_changed = True
-        else:
-            print("\U0001f50d אין Intent — שולחים לשאילת GPT עם חיפוש הקשר")
-            results = collection.query(query_texts=[question], n_results=3)
-            relevant_context = "\n---\n".join(doc[0] for doc in results["documents"] if doc)
-            print("\U0001f50d הקשר שהוחזר מה־Chroma:\n", relevant_context)
-            full_system_prompt = f"""{system_prompt}\n\nהקשר רלוונטי מתוך המסמכים:\n{relevant_context}\n"""
-            history = [{"role": "system", "content": full_system_prompt}]
-            for entry in session["history"]:
-                history.append({"role": "user", "content": entry["question"]})
-                history.append({"role": "assistant", "content": entry["answer"]})
-            history.append({"role": "user", "content": question})
-            completion = client.chat.completions.create(
-                model="gpt-4",
-                messages=history
-            )
-            answer = completion.choices[0].message.content.strip()
+        print("\U0001f50d שולחים לשאילת GPT עם חיפוש הקשר")
+        results = collection.query(query_texts=[question], n_results=3)
+        relevant_context = "\n---\n".join(doc[0] for doc in results["documents"] if doc)
+        print("\U0001f50d הקשר שהוחזר מה־Chroma:\n", relevant_context)
+        full_system_prompt = f"""{system_prompt}\n\nהקשר רלוונטי מתוך המסמכים:\n{relevant_context}\n"""
+        history = [{"role": "system", "content": full_system_prompt}]
+        for entry in session["history"]:
+            history.append({"role": "user", "content": entry["question"]})
+            history.append({"role": "assistant", "content": entry["answer"]})
+        history.append({"role": "user", "content": question})
+        completion = client.chat.completions.create(
+            model="gpt-4",
+            messages=history
+        )
+        answer = completion.choices[0].message.content.strip()
     return answer, session, interested_lead_pending_changed
 
 # === Serve React Frontend === #
@@ -133,7 +124,7 @@ def api_chat():
     if not question:
         return jsonify({"error": "No question provided"}), 400
     print(f"\n🟢 שאלה מהמשתמש (API): {question}")
-    answer, session_data_, _ = handle_question(question, session_data, intents, collection, system_prompt, client)
+    answer, session_data_, _ = handle_question(question, session_data, collection, system_prompt, client)
     session_data["history"].append({"question": question, "answer": answer})
     session_data.modified = True
     return jsonify({
