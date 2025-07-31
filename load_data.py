@@ -42,7 +42,7 @@ def add_doc(text, doc_id, metadata):
     print(f"✅ נוסף: {doc_id}")
 
 # טעינת הידע מהחלק knowledge
-for item in data.get("knowledge", []):
+for item in data.get("data", []):
     text = f"שאלה: {item.get('question_he', '')}\nתשובה: {item.get('answer_he', '')}"
     language = item.get("language", [])
     if isinstance(language, list):
