@@ -12,8 +12,13 @@ collection = chroma_client.get_or_create_collection("atarize_knowledge")
 
 # מחיקת מסמכים קיימים
 try:
-    collection.delete(where={})
-    print("✅ כל המסמכים הקיימים נמחקו מה-collection.")
+    existing = collection.get()
+    ids = existing["ids"]
+    if ids:
+        collection.delete(ids=ids)
+        print("✅ כל המסמכים הקיימים נמחקו מה-collection.")
+    else:
+        print("ℹ️ לא נמצאו מסמכים קיימים למחיקה.")
 except Exception as e:
     print(f"שגיאה במחיקת המסמכים: {e}")
 
@@ -38,7 +43,6 @@ def add_doc(text, doc_id, metadata):
 
 # טעינת הידע מהחלק knowledge
 for item in data.get("knowledge", []):
-    # בחר פה איזה טקסט להוסיף, למשל את התשובה בעברית
     text = f"שאלה: {item.get('question_he', '')}\nתשובה: {item.get('answer_he', '')}"
     language = item.get("language", [])
     if isinstance(language, list):
@@ -62,7 +66,7 @@ for intent in data.get("intents", []):
         metadata={
             "type": "intent",
             "intent": intent.get("name", ""),
-            "language": "he",  # אפשר לשנות אם יש יותר שפות
+            "language": "he",
             "source": "Atarize"
         }
     )
