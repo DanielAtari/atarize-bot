@@ -1,62 +1,160 @@
 {
-  "knowledge": [
+  "data": [
     {
-      "id": "intent_pricing_1",
-      "question_he": "כמה עולה הקמת הבוט?",
-      "answer_he": "הקמת הבוט עולה 600 ש\"ח כולל מע\"מ. יש מסלולים חודשיים לפי כמות ההודעות.",
-      "question_en": "How much does it cost to set up the bot?",
-      "answer_en": "The bot setup costs 600 ILS including VAT. There are monthly plans based on message volume.",
-      "intent": "pricing",
-      "language": ["he", "en"]
+      "id": "about_atarize",
+      "question": "מה זה Atarize?",
+      "variations": ["מהי Atarize?", "מה זה אתרייז?", "ספרו לי על Atarize", "what is Atarize?", "tell me about Atarize"],
+      "answer": {
+        "he": "Atarize היא פלטפורמה חכמה לבניית צ'אטבוטים מותאמים אישית לעסקים בישראל. הבוטים שלנו מבוססים על GPT וטכנולוגיית Vector DB מתקדמת, ומספקים מענה זורם, טבעי ומדויק ללקוחות – 24/7, גם כשאתה לא זמין.",
+        "en": "Atarize is a smart platform for building custom chatbots for businesses in Israel. Our bots are powered by GPT and advanced Vector DB technology, delivering smooth, natural, and accurate customer support 24/7, even when you're unavailable."
+      },
+      "metadata": {
+        "intent": "what_is_atarize",
+        "category": "about",
+        "language": ["he", "en"]
+      }
     },
     {
-      "id": "intent_setup_1",
-      "question_he": "כמה זמן לוקח לבנות את הבוט?",
-      "answer_he": "תהליך בניית הבוט אורך בין 2 ל-5 ימי עסקים.",
-      "question_en": "How long does it take to build the bot?",
-      "answer_en": "The bot building process takes between 2 to 5 business days.",
-      "intent": "setup",
-      "language": ["he", "en"]
+      "id": "what_we_do",
+      "question": "מה השירות של Atarize כולל?",
+      "variations": ["מה Atarize מציעה?", "מה עושים אצלכם?", "what does Atarize do?", "what services do you offer?"],
+      "answer": {
+        "he": "אנחנו בונים בוטים שמבוססים על טקסטים שיווקיים, שאלות נפוצות, קבצי מידע או עמודי הסבר. מתאימים את טון הדיבור של הבוט לעסק שלך (קליל, מקצועי, הומוריסטי ועוד). מאפשרים איסוף לידים חמים מתוך שיחה טבעית. מטמיעים את הבוט באתר, בדף נחיתה או כקישור לשיתוף בוואטסאפ.",
+        "en": "We build bots based on marketing texts, FAQs, info files or explanation pages. We adapt the bot’s tone of voice to your brand (casual, professional, humorous, etc.). The bot collects hot leads naturally during the chat. It can be embedded on your website, landing page, or shared as a WhatsApp link."
+      },
+      "metadata": {
+        "intent": "service_overview",
+        "category": "about",
+        "language": ["he", "en"]
+      }
     },
     {
-      "id": "intent_lead_capture_1",
-      "question_he": "איך אני משאיר פרטים?",
-      "answer_he": "תוכל לשלוח שם, טלפון ומייל, ונחזור אליך בהקדם.",
-      "question_en": "How do I leave my contact details?",
-      "answer_en": "You can send your name, phone, and email, and we will get back to you shortly.",
-      "intent": "lead_capture",
-      "language": ["he", "en"]
+      "id": "how_it_works",
+      "question": "איך עובד תהליך העבודה?",
+      "variations": ["מה שלבי העבודה?", "איך מתחילים לעבוד איתכם?", "how does the process work?", "how to get started with Atarize?"],
+      "answer": {
+        "he": "ממלאים טופס קצר עם מידע על השירותים, השאלות והתוכן שהבוט אמור לדעת. מעלים קבצים או טקסטים. לאחר מכן מקבלים קישור לצ'אטבוט אישי שמדבר בשם העסק שלך.",
+        "en": "You fill out a short form with information about the services, questions and content the bot should know. Upload your files or texts. Then you get a personal chatbot link that represents your business."
+      },
+      "metadata": {
+        "intent": "workflow",
+        "category": "onboarding",
+        "language": ["he", "en"]
+      }
     },
     {
-      "id": "intent_benefits_1",
-      "question_he": "מה היתרונות של הבוט?",
-      "answer_he": "הבוט עובד 24/7, נותן מענה אנושי ומאפשר איסוף לידים חמים.",
-      "question_en": "What are the benefits of the bot?",
-      "answer_en": "The bot works 24/7, provides human-like responses, and enables hot lead collection.",
-      "intent": "benefits",
-      "language": ["he", "en"]
-    }
-  ],
-  "intents": [
-    {
-      "name": "pricing",
-      "triggers": ["מחיר", "כמה עולה", "תמחור", "עלות", "תשלום"],
-      "response": "הקמת הבוט עולה 600 ש\"ח. יש מסלולים חודשיים לפי כמות ההודעות."
+      "id": "bot_setup_time",
+      "question": "כמה זמן לוקח להקים את הבוט?",
+      "variations": ["תוך כמה זמן הבוט מוכן?", "כמה זמן לוקח עד שהבוט באוויר?", "how long does it take to set up the bot?", "when will my chatbot be ready?"],
+      "answer": {
+        "he": "בדרך כלל בין 3 ל־5 ימי עסקים, בהתאם למורכבות ולחומרים שנמסרים.",
+        "en": "Usually between 3 to 5 business days, depending on complexity and the materials provided."
+      },
+      "metadata": {
+        "intent": "setup_time",
+        "category": "faq",
+        "language": ["he", "en"]
+      }
     },
     {
-      "name": "setup",
-      "triggers": ["כמה זמן", "מתי הבוט מוכן", "תהליך בנייה"],
-      "response": "הבוט בנוי תוך 2–5 ימי עסקים."
+      "id": "payment_methods",
+      "question": "איך משלמים עבור השירות?",
+      "variations": ["מה אפשרויות התשלום?", "איך מתבצע התשלום?", "how do I pay?", "payment methods for the bot"],
+      "answer": {
+        "he": "תשלום חד־פעמי להקמה + מנוי חודשי לפי החבילה. ניתן לשלם בביט, אשראי או העברה בנקאית.",
+        "en": "One-time setup fee + monthly subscription depending on your plan. You can pay via Bit, credit card or bank transfer."
+      },
+      "metadata": {
+        "intent": "payment_options",
+        "category": "faq",
+        "language": ["he", "en"]
+      }
     },
     {
-      "name": "lead_capture",
-      "triggers": ["איך להשאיר פרטים", "רוצה להשאיר פרטים", "איך ליצור קשר"],
-      "response": "תוכל לשלוח שם, טלפון ומייל, ונחזור אליך בהקדם."
+      "id": "whatsapp_support",
+      "question": "האם הבוט עובד גם בוואטסאפ?",
+      "variations": ["אפשר להפעיל את הבוט בוואטסאפ?", "הבוט מתאים לוואטסאפ?", "can the bot work on WhatsApp?", "is WhatsApp supported?"],
+      "answer": {
+        "he": "כן. ניתן לשלב את הצ’אטבוט בוואטסאפ כקישור. חיבור רשמי לחשבון וואטסאפ דורש חשבון עסקי מאומת ב-Meta ומספר טלפון ייעודי.",
+        "en": "Yes. The chatbot can be shared via WhatsApp as a link. For official integration, a verified Meta business account and dedicated phone number are required."
+      },
+      "metadata": {
+        "intent": "whatsapp_support",
+        "category": "faq",
+        "language": ["he", "en"]
+      }
     },
     {
-      "name": "benefits",
-      "triggers": ["יתרונות", "למה להשתמש", "מה הבוט עושה"],
-      "response": "הבוט עובד 24/7, נותן מענה אנושי ומאפשר איסוף לידים חמים."
+      "id": "crm_integration",
+      "question": "האם הבוט מתחבר ל-CRM או מערכות אחרות?",
+      "variations": ["אפשר לחבר את הבוט למערכות קיימות?", "יש אינטגרציות עם CRM?", "can you integrate with CRM systems?", "does the bot support integrations?"],
+      "answer": {
+        "he": "כן. ניתן לבדוק התאמה למערכות CRM, סליקה או כל מערכת רלוונטית אחרת, בהתאם לאישורים ותנאי השימוש של העסק.",
+        "en": "Yes. We can assess compatibility with CRM systems, payment gateways or any relevant platform, depending on technical and business constraints."
+      },
+      "metadata": {
+        "intent": "crm_integration",
+        "category": "faq",
+        "language": ["he", "en"]
+      }
+    },
+    {
+      "id": "pricing_notice",
+      "question": "האם המחירים עלולים להשתנות?",
+      "variations": ["האם אלו מחירי קבע?", "יכול להיות שהמחיר יעלה בעתיד?", "are prices final?", "can prices change in future?"],
+      "answer": {
+        "he": "המחירים המוצגים הם מחירי הרצה, ועשויים להשתנות עם הוספת פיצ'רים ושיפורים. נעדכן אותך מראש בכל שינוי רלוונטי.",
+        "en": "Current prices are introductory and may change as we add features and improvements. We’ll notify you in advance of any updates."
+      },
+      "metadata": {
+        "intent": "price_change_notice",
+        "category": "pricing",
+        "language": ["he", "en"]
+      }
+    },
+    {
+      "id": "bot_features",
+      "question": "מהם היתרונות של הבוט?",
+      "variations": ["מה תכונות הבוט?", "מה הבוט יודע לעשות?", "what are the chatbot features?", "benefits of using the bot"],
+      "answer": {
+        "he": "🤖 מענה אוטומטי לשאלות חוזרות\n💬 תמיכה רב-לשונית\n⚡️ חיבור מהיר דרך טופס והעלאת מידע\n📈 זיהוי לידים חמים\n🧠 התאמה אישית לטון העסק",
+        "en": "🤖 Automated answers to FAQs\n💬 Multilingual support\n⚡️ Quick setup with form and file upload\n📈 Hot lead detection\n🧠 Custom tone aligned with your brand"
+      },
+      "metadata": {
+        "intent": "bot_features",
+        "category": "features",
+        "language": ["he", "en"]
+      }
+    },
+    {
+      "id": "business_use_cases",
+      "question": "באילו תחומים אפשר להשתמש בצ'אטבוט?",
+      "variations": ["איזה סוגי עסקים מתאימים?", "באילו תחומים הבוט עוזר?", "which businesses can benefit?", "examples of chatbot use cases"],
+      "answer": {
+        "he": "• מסעדות/ברים – תפריטים, זמינות שולחנות, לידים לאירועים\n• נדל"ן – איסוף קריטריונים, שליחת נכסים, קביעת סיורים\n• קליניקות – תיאום תורים, שאלונים רפואיים, מידע על טיפולים\n• סוכנויות – בריף, הצעת מחיר, סינון פניות\n• גיוס – קבלת קו"ח, שאלות מיון, תיאום ראיונות\n• חוגים ולימודים – הרשמה, מידע, תשלומים\n• SaaS – תמיכה טכנית, בסיס ידע, אוטומציות שירות",
+        "en": "• Restaurants/Bars – menus, table availability, event leads\n• Real Estate – collecting preferences, sending listings, tour scheduling\n• Clinics – appointment booking, pre-visit forms, treatment info\n• Agencies – intake briefs, price estimates, lead filtering\n• Recruiting – resume collection, pre-screening, interview setup\n• Courses/Education – registration, information, payments\n• SaaS – technical support, knowledge base, service automations"
+      },
+      "metadata": {
+        "intent": "chatbot_use_cases",
+        "category": "use_cases",
+        "language": ["he", "en"]
+      }
+    },
+    {
+      "id": "pricing_plans",
+      "question": "מה כוללות החבילות החודשיות?",
+      "variations": ["מה יש בכל חבילה?", "מה ההבדל בין Basic ל-Business?", "what’s included in each plan?", "monthly subscription tiers explained"],
+      "answer": {
+        "he": "יש שלוש חבילות לפי נפח פעילות:\n• Basic – 49 ש"ח לחודש (עד 100 הודעות)\n• Pro – 149 ש"ח לחודש (עד 500 הודעות)\n• Business – 399 ש"ח לחודש (2,000+ הודעות)\nכל חבילה כוללת תחזוקה שוטפת, גיבויים, ותמיכה בסיסית. אפשר גם להרחיב בהתאמה אישית לעסקים שזקוקים ליותר.",
+        "en": "There are 3 monthly plans based on usage volume:\n• Basic – 49 ILS/month (up to 100 messages)\n• Pro – 149 ILS/month (up to 500 messages)\n• Business – 399 ILS/month (2,000+ messages)\nEach plan includes ongoing maintenance, backups, and standard support. Custom plans are also available for businesses that need more."
+      },
+      "metadata": {
+        "intent": "pricing_tiers",
+        "category": "pricing",
+        "language": ["he", "en"]
+      }
+        
     }
   ]
 }
+        
