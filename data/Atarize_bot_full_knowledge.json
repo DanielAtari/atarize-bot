@@ -182,7 +182,7 @@
         "examples of chatbot use cases"
       ],
       "answer": {
-        "he": "• מסעדות/ברים – תפריטים, זמינות שולחנות, לידים לאירועים\n• נדל"ן – איסוף קריטריונים, שליחת נכסים, קביעת סיורים\n• קליניקות – תיאום תורים, שאלונים רפואיים, מידע על טיפולים\n• סוכנויות – בריף, הצעת מחיר, סינון פניות\n• גיוס – קבלת קו"ח, שאלות מיון, תיאום ראיונות\n• חוגים ולימודים – הרשמה, מידע, תשלומים\n• SaaS – תמיכה טכנית, בסיס ידע, אוטומציות שירות",
+        "he": "• מסעדות/ברים – תפריטים, זמינות שולחנות, לידים לאירועים\n• נדלן – איסוף קריטריונים, שליחת נכסים, קביעת סיורים\n• קליניקות – תיאום תורים, שאלונים רפואיים, מידע על טיפולים\n• סוכנויות – בריף, הצעת מחיר, סינון פניות\n• גיוס – קבלת קוח, שאלות מיון, תיאום ראיונות\n• חוגים ולימודים – הרשמה, מידע, תשלומים\n• SaaS – תמיכה טכנית, בסיס ידע, אוטומציות שירות",
         "en": "• Restaurants/Bars – menus, table availability, event leads\n• Real Estate – collecting preferences, sending listings, tour scheduling\n• Clinics – appointment booking, pre-visit forms, treatment info\n• Agencies – intake briefs, price estimates, lead filtering\n• Recruiting – resume collection, pre-screening, interview setup\n• Courses/Education – registration, information, payments\n• SaaS – technical support, knowledge base, service automations"
       },
       "metadata": {
