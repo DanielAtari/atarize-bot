@@ -1,4 +1,4 @@
-from chromadb import PersistentClient
+from chromadb import HttpClient
 import os
 import json
 
@@ -7,7 +7,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
 # אתחול Chroma
-chroma_client = PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))
+chroma_client = HttpClient(host="localhost", port=8000)
 collection = chroma_client.get_or_create_collection("atarize_knowledge")
 
 # מחיקת מסמכים קיימים
@@ -72,3 +72,4 @@ for intent in data.get("intents", []):
     )
 
 print("🎉 כל הידע וה-intents הועלו בהצלחה ל־Chroma!")
+print("📦 מספר פריטים:", collection.count())
