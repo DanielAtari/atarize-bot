@@ -17,7 +17,7 @@ EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_TARGET = os.getenv("EMAIL_TARGET")
 
 # === הגדרת Flask === #
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static/dist", static_url_path="")
 app.secret_key = FLASK_SECRET_KEY
 app.permanent_session_lifetime = timedelta(minutes=30)
 
@@ -113,18 +113,10 @@ def handle_question(question, session, intents, collection, system_prompt, clien
             answer = completion.choices[0].message.content.strip()
     return answer, session, interested_lead_pending_changed
 
-@app.route("/", methods=["GET", "POST"])
-def chat():
-    answer = ""
-    if "history" not in session_data:
-        session_data["history"] = []
-    if request.method == "POST":
-        question = request.form.get("question")
-        print(f"\n🟢 שאלה מהמשתמש: {question}")
-        answer, session_data_, _ = handle_question(question, session_data, intents, collection, system_prompt, client)
-        session_data["history"].append({"question": question, "answer": answer})
-        session_data.modified = True
-    return render_template("chat.html", answer=answer, history=session_data.get("history", []))
+# === Serve React Frontend === #
+@app.route("/")
+def index():
+    return app.send_static_file("index.html")
 
 @app.route("/api/chat", methods=["POST"])
 def api_chat():
