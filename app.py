@@ -116,6 +116,10 @@ def handle_question(question, session, intents, collection, system_prompt, clien
     return answer, session, interested_lead_pending_changed
 
 # === Serve React Frontend === #
+@app.route("/health")
+def health():
+    return "OK", 200
+
 @app.route("/")
 def index():
     return app.send_static_file("index.html")
