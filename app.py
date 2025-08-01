@@ -72,6 +72,22 @@ def send_email_notification(subject, message):
         print(f"❌ שגיאה בשליחת המייל: {e}")
         return False
 
+def is_confident_answer(answer):
+    if not answer:
+        return False
+    lowered = answer.strip().lower()
+    vague_phrases = [
+        "i don't know", "לא יודעת", "לא יודע", "אין לי מידע", "sorry", "מצטערת", "לא בטוחה", "לא בטוח", "אין לי תשובה"
+    ]
+    for phrase in vague_phrases:
+        if phrase in lowered:
+            return False
+    # Optionally, treat very short answers as not confident
+    if len(answer.strip()) < 8:
+        return False
+    return True
+
+
 def handle_question(question, session, collection, system_prompt, client):
     answer = None
     interested_lead_pending_changed = False
@@ -89,21 +105,42 @@ def handle_question(question, session, collection, system_prompt, client):
         else:
             answer = "רק תוודא ששלחת גם שם, טלפון ומייל \U0001f64f"
     else:
-        print("\U0001f50d שולחים לשאילת GPT עם חיפוש הקשר")
-        results = collection.query(query_texts=[question], n_results=3)
-        relevant_context = "\n---\n".join(doc[0] for doc in results["documents"] if doc)
-        print("\U0001f50d הקשר שהוחזר מה־Chroma:\n", relevant_context)
-        full_system_prompt = f"""{system_prompt}\n\nהקשר רלוונטי מתוך המסמכים:\n{relevant_context}\n"""
-        history = [{"role": "system", "content": full_system_prompt}]
-        for entry in session["history"]:
-            history.append({"role": "user", "content": entry["question"]})
-            history.append({"role": "assistant", "content": entry["answer"]})
-        history.append({"role": "user", "content": question})
-        completion = client.chat.completions.create(
+        # 1. Try GPT with minimal system prompt, no context, no history
+        minimal_prompt = "את עטרה, אסיסטנטית חכמה. עני בקצרה ובבירור על השאלה. אם אינך יודעת, אמרי 'אני לא יודעת'."
+        print("\U0001f916 שולחת שאלה ל-GPT ללא הקשר...")
+        first_try = client.chat.completions.create(
             model="gpt-4",
-            messages=history
+            messages=[{"role": "system", "content": minimal_prompt}, {"role": "user", "content": question}]
         )
-        answer = completion.choices[0].message.content.strip()
+        gpt_answer = first_try.choices[0].message.content.strip()
+        print(f"\U0001f916 תשובת GPT ללא הקשר: {gpt_answer}")
+        if is_confident_answer(gpt_answer):
+            answer = gpt_answer
+        else:
+            # 2. Fallback: Chroma context + full system prompt + history (as before)
+            print("\U0001f50d שולחים לשאילת GPT עם חיפוש הקשר")
+            results = collection.query(query_texts=[question], n_results=3)
+            relevant_context = "\n---\n".join(doc[0] for doc in results["documents"] if doc)
+            print("\U0001f50d הקשר שהוחזר מה־Chroma:\n", relevant_context)
+            full_system_prompt = f"{system_prompt}\n\nהקשר רלוונטי מתוך המסמכים:\n{relevant_context}\n"
+            history = [{"role": "system", "content": full_system_prompt}]
+            for entry in session.get("history", []):
+                history.append({"role": "user", "content": entry["question"]})
+                history.append({"role": "assistant", "content": entry["answer"]})
+            history.append({"role": "user", "content": question})
+            completion = client.chat.completions.create(
+                model="gpt-4",
+                messages=history
+            )
+            chroma_answer = completion.choices[0].message.content.strip()
+            print(f"\U0001f916 תשובת GPT עם הקשר: {chroma_answer}")
+            if is_confident_answer(chroma_answer):
+                answer = chroma_answer
+            else:
+                # 3. Still no good answer: ask for contact info
+                session["interested_lead_pending"] = True
+                answer = "לא מצאתי תשובה מספקת כרגע. אשמח שתגיש פרטי קשר (שם, טלפון, מייל) כדי שנוכל לחזור אליך עם תשובה מלאה."
+                interested_lead_pending_changed = True
     return answer, session, interested_lead_pending_changed
 
 # === Serve React Frontend === #
