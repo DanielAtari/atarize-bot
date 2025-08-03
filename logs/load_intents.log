@@ -1,0 +1,44 @@
+2025-08-02 22:01:00,002 [INFO] Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+2025-08-02 22:01:00,089 [ERROR] Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+2025-08-02 22:01:00,100 [ERROR] Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2025-08-02 22:01:00,901 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:01:01,056 [ERROR] Failed to send telemetry event CollectionAddEvent: capture() takes 1 positional argument but 3 were given
+2025-08-02 22:01:02,118 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:01:14,302 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:01:15,013 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:01:15,737 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:01:16,250 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:01:16,761 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:17:55,032 [INFO] Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+2025-08-02 22:17:55,126 [ERROR] Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+2025-08-02 22:17:55,133 [ERROR] Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2025-08-02 22:17:57,110 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:17:57,253 [ERROR] Failed to send telemetry event CollectionAddEvent: capture() takes 1 positional argument but 3 were given
+2025-08-02 22:17:58,747 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:17:59,703 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:18:00,588 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:18:01,614 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:18:02,406 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:18:03,457 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:41:14,648 [INFO] Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+2025-08-02 22:41:14,813 [ERROR] Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+2025-08-02 22:41:14,830 [ERROR] Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2025-08-02 22:41:15,850 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:41:15,943 [ERROR] Failed to send telemetry event CollectionAddEvent: capture() takes 1 positional argument but 3 were given
+2025-08-02 22:41:17,217 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:41:17,639 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:41:17,986 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:41:18,478 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:41:18,920 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:41:19,338 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:44:26,414 [INFO] Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+2025-08-02 22:44:26,594 [ERROR] Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+2025-08-02 22:44:26,609 [ERROR] Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2025-08-02 22:44:27,690 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:44:27,706 [ERROR] Failed to send telemetry event CollectionAddEvent: capture() takes 1 positional argument but 3 were given
+2025-08-02 22:44:28,909 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:44:29,355 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:44:29,830 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:44:30,306 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:44:30,649 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 22:44:31,098 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"

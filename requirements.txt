@@ -5,3 +5,5 @@ flask-cors
 python-dotenv
 chromadb>=0.4.24
 sentence-transformers
+tiktoken
+rapidfuzz

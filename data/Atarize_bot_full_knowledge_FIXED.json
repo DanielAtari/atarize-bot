@@ -45,8 +45,8 @@
         "en": "Work Process"
       },
       "content": {
-        "he": "כדי להקים את הצ'אטבוט שלך, בוחרים אילו שירותים, שאלות ומידע הוא אמור לדעת – זה קורה דרך טופס פשוט שנשלח אליך. לאחר מכן מעלים קובץ טקסט, עמוד מידע או כל תוכן רלוונטי שתרצה שהבוט יכיר. הקמת הבוט נמשכת בדרך כלל 2-5 ימי עבודה, תלוי במהירות קבלת המידע והתכנים מהלקוח. לאחר מכן תקבל קישור לצ'אטבוט אישי שמדבר בשם העסק שלך – אפשר להטמיע אותו באתר, לשלוח בוואטסאפ או להפיץ בכל דרך שתרצה.",
-        "en": "To set up your chatbot, you choose what services, questions, and information it should know—done via a simple form we send you. Then you upload a text file, info page, or any relevant content you want the bot to understand. Bot setup typically takes 2-5 business days, depending on how quickly we receive the information and content from the client. After that, you'll receive a personal chatbot link that speaks on behalf of your business. It can be embedded on your site, shared via WhatsApp, or distributed however you prefer."
+        "he": "כדי להקים את הצ’אטבוט שלך, בוחרים אילו שירותים, שאלות ומידע הוא אמור לדעת – זה קורה דרך טופס פשוט שנשלח אליך. לאחר מכן מעלים קובץ טקסט, עמוד מידע או כל תוכן רלוונטי שתרצה שהבוט יכיר. בתוך מספר ימים תקבל קישור לצ’אטבוט אישי שמדבר בשם העסק שלך – אפשר להטמיע אותו באתר, לשלוח בוואטסאפ או להפיץ בכל דרך שתרצה.",
+        "en": "To set up your chatbot, you choose what services, questions, and information it should know—done via a simple form we send you. Then you upload a text file, info page, or any relevant content you want the bot to understand. Within a few days, you’ll receive a personal chatbot link that speaks on behalf of your business. It can be embedded on your site, shared via WhatsApp, or distributed however you prefer."
       },
       "metadata": {
         "intent": "onboarding_process",
@@ -96,7 +96,7 @@
       }
     },
     {
-      "id": "pricing",
+      "id": "pricing_details",
       "title": {
         "he": "מחירים ועלויות",
         "en": "Pricing and Costs"
@@ -111,7 +111,7 @@
           "he",
           "en"
         ],
-        "intent": "pricing"
+        "intent": "pricing_details"
       }
     },
     {
@@ -130,7 +130,7 @@
           "he",
           "en"
         ],
-        "intent": "faq"
+        "intent": "common_questions"
       }
     }
   ]
