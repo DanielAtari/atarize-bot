@@ -10988,3 +10988,59 @@ Atarize is a platform for building smart, custom chatbots for businesses in Isra
 2025-08-02 23:40:47,676 [DEBUG] queue_event FileModifiedEvent(src_path='/Users/danielatari/Desktop/Programming/atarize_bot_demo/app.py', dest_path='', event_type='modified', is_directory=False, is_synthetic=False)
 2025-08-02 23:40:47,677 [INFO]  * Detected change in '/Users/danielatari/Desktop/Programming/atarize_bot_demo/app.py', reloading
 2025-08-02 23:40:48,317 [INFO]  * Restarting with watchdog (fsevents)
+2025-08-03 09:36:11,044 [DEBUG] load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-08-03 09:36:11,058 [DEBUG] load_verify_locations cafile='/opt/anaconda3/lib/python3.12/site-packages/certifi/cacert.pem'
+2025-08-03 09:36:11,331 [INFO] Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+2025-08-03 09:36:11,430 [DEBUG] Starting component System
+2025-08-03 09:36:11,430 [DEBUG] Starting component Posthog
+2025-08-03 09:36:11,549 [ERROR] Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+2025-08-03 09:36:11,549 [ERROR] Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2025-08-03 09:36:11,575 [ERROR] Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2025-08-03 09:36:12,660 [INFO] [STARTUP] Knowledge collection: 14 docs
+2025-08-03 09:36:12,660 [INFO] [STARTUP] Intents collection: 7 docs
+2025-08-03 09:36:12,661 [DEBUG] load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-08-03 09:36:12,662 [DEBUG] load_verify_locations cafile='/opt/anaconda3/lib/python3.12/site-packages/certifi/cacert.pem'
+2025-08-03 09:36:28,109 [DEBUG] load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-08-03 09:36:28,112 [DEBUG] load_verify_locations cafile='/opt/anaconda3/lib/python3.12/site-packages/certifi/cacert.pem'
+2025-08-03 09:36:28,308 [INFO] Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+2025-08-03 09:36:28,372 [DEBUG] Starting component System
+2025-08-03 09:36:28,372 [DEBUG] Starting component Posthog
+2025-08-03 09:36:28,386 [ERROR] Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+2025-08-03 09:36:28,387 [ERROR] Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2025-08-03 09:36:28,388 [ERROR] Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2025-08-03 09:36:29,208 [INFO] [STARTUP] Knowledge collection: 14 docs
+2025-08-03 09:36:29,209 [INFO] [STARTUP] Intents collection: 7 docs
+2025-08-03 09:36:29,210 [DEBUG] load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-08-03 09:36:29,211 [DEBUG] load_verify_locations cafile='/opt/anaconda3/lib/python3.12/site-packages/certifi/cacert.pem'
+2025-08-03 09:36:29,296 [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5050
+ * Running on http://192.168.1.245:5050
+2025-08-03 09:36:29,296 [INFO] [33mPress CTRL+C to quit[0m
+2025-08-03 09:36:29,314 [INFO]  * Restarting with watchdog (fsevents)
+2025-08-03 09:36:31,639 [DEBUG] load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-08-03 09:36:31,641 [DEBUG] load_verify_locations cafile='/opt/anaconda3/lib/python3.12/site-packages/certifi/cacert.pem'
+2025-08-03 09:36:31,846 [INFO] Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+2025-08-03 09:36:31,925 [DEBUG] Starting component System
+2025-08-03 09:36:31,925 [DEBUG] Starting component Posthog
+2025-08-03 09:36:31,935 [ERROR] Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+2025-08-03 09:36:31,935 [ERROR] Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2025-08-03 09:36:31,938 [ERROR] Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2025-08-03 09:36:32,824 [INFO] [STARTUP] Knowledge collection: 14 docs
+2025-08-03 09:36:32,825 [INFO] [STARTUP] Intents collection: 7 docs
+2025-08-03 09:36:32,825 [DEBUG] load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-08-03 09:36:32,826 [DEBUG] load_verify_locations cafile='/opt/anaconda3/lib/python3.12/site-packages/certifi/cacert.pem'
+2025-08-03 09:36:32,888 [WARNING]  * Debugger is active!
+2025-08-03 09:36:32,912 [INFO]  * Debugger PIN: 141-196-652
+2025-08-03 09:39:36,956 [DEBUG] load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-08-03 09:39:36,958 [DEBUG] load_verify_locations cafile='/opt/anaconda3/lib/python3.12/site-packages/certifi/cacert.pem'
+2025-08-03 09:39:37,231 [INFO] Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+2025-08-03 09:39:37,289 [DEBUG] Starting component System
+2025-08-03 09:39:37,289 [DEBUG] Starting component Posthog
+2025-08-03 09:39:37,297 [ERROR] Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+2025-08-03 09:39:37,297 [ERROR] Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2025-08-03 09:39:37,300 [ERROR] Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2025-08-03 09:39:38,124 [INFO] [STARTUP] Knowledge collection: 14 docs
+2025-08-03 09:39:38,125 [INFO] [STARTUP] Intents collection: 7 docs
+2025-08-03 09:39:38,125 [DEBUG] load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-08-03 09:39:38,126 [DEBUG] load_verify_locations cafile='/opt/anaconda3/lib/python3.12/site-packages/certifi/cacert.pem'

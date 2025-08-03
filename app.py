@@ -238,20 +238,33 @@ def send_email_notification(subject, message):
         return False
 
 def is_vague_gpt_answer(answer):
+    """
+    More intelligent vagueness detection that reduces false positives.
+    Only triggers when answer is ACTUALLY useless.
+    """
     if not answer or not answer.strip():
         return True
-    answer_lower = answer.lower()
-    vague_phrases = [
-        "i don't know", "sorry", "i am not sure", "cannot help", "no information",
-        "as an ai", "i do not have", "i’m not able", "i don't have enough information",
-        "i cannot answer", "i’m unable to", "i don't understand", "please provide more information",
-        "i am unable", "i am not able", "i do not understand", "אין לי מידע", "לא יודע", "לא מצאתי מידע"
+    
+    # Must be extremely short to be considered vague
+    if len(answer.strip()) < 15:
+        return True
+    
+    # Only flag very generic responses
+    truly_vague_phrases = [
+        "i don't know anything about",
+        "i have no information about", 
+        "i cannot help you with this",
+        "i'm not able to assist",
+        "אין לי שום מידע על",
+        "לא יכול לעזור עם זה",
+        "לא מוכר לי"
     ]
-    if any(phrase in answer_lower for phrase in vague_phrases):
-        return True
-    if len(answer.strip()) < 10:
-        return True
-    return False
+    
+    answer_lower = answer.lower()
+    vague_count = sum(1 for phrase in truly_vague_phrases if phrase in answer_lower)
+    
+    # Only consider vague if multiple vague phrases or very short
+    return vague_count >= 2 or (vague_count >= 1 and len(answer) < 30)
 
 def detect_lead_info(text):
     # Simple check for email, phone, and name (expand as needed)
@@ -996,6 +1009,253 @@ LEAD_INTENTS = {"interested_lead", "lead_collection", "contact_request"}
 FOLLOWUP_KEYWORDS = ["לקבלת מידע נוסף", "סוג העסק", "פרטים נוספים", "האם תרצה לדעת עוד", "Would you like to know more", "business type"]
 
 
+# === SMART FALLBACK SYSTEM === #
+
+def handle_intent_failure(question, session, collection, system_prompt, client):
+    """
+    Intelligent fallback when intent detection completely fails.
+    Try multiple approaches before giving up.
+    """
+    logger.info(f"[SMART_FALLBACK] Intent detection failed, trying intelligent alternatives...")
+    
+    # Step 1: Try general knowledge retrieval (no intent filter)
+    try:
+        lang = detect_language(question)
+        logger.debug(f"[SMART_FALLBACK] Trying general knowledge search...")
+        
+        # Query ChromaDB without intent filtering
+        general_results = collection.query(
+            query_texts=[question], 
+            n_results=5,
+            where={"language": lang}  # Only filter by language
+        )
+        
+        if general_results and general_results['documents'][0]:
+            documents = general_results['documents'][0]
+            context = "\n---\n".join(documents[:3])  # Use top 3 results
+            
+            logger.info(f"[SMART_FALLBACK] ✅ Found general knowledge context ({len(context)} chars)")
+            
+            # Build prompt with general context
+            general_prompt = f"""
+{system_prompt}
+
+הקשר רלוונטי מהמאגר:
+{context}
+
+שאלה של המשתמש: {question}
+
+ענה בצורה ידידותית ומועילה על בסיס המידע שלעיל. אם המידע לא מכסה את השאלה במלואה, תן מה שאתה יכול ותציע לשאול שאלה נוספת או ליצור קשר לפרטים נוספים.
+"""
+            
+            # Call GPT with general context
+            response = call_gpt_with_context(general_prompt, session, client, model="gpt-4-turbo")
+            if response and not is_truly_vague(response):
+                session["fallback_used"] = "general_knowledge"
+                session["history"].append({"role": "assistant", "content": response})
+                logger.info(f"[SMART_FALLBACK] ✅ Success with general knowledge")
+                return response, session
+    
+    except Exception as e:
+        logger.error(f"[SMART_FALLBACK] General knowledge search failed: {e}")
+    
+    # Step 2: Try semantic similarity across all content
+    try:
+        logger.debug(f"[SMART_FALLBACK] Trying broad semantic search...")
+        
+        # Expand search to all documents, ignore intent completely
+        broad_results = collection.query(
+            query_texts=[question], 
+            n_results=10,
+            # No where clause = search everything
+        )
+        
+        if broad_results and broad_results['documents'][0]:
+            # Filter by language after retrieval
+            lang = detect_language(question)
+            relevant_docs = []
+            
+            for i, doc in enumerate(broad_results['documents'][0]):
+                metadata = broad_results['metadatas'][0][i] if broad_results['metadatas'] else {}
+                doc_lang = metadata.get('language', lang)
+                if doc_lang == lang:
+                    relevant_docs.append(doc)
+                    if len(relevant_docs) >= 3:  # Limit to top 3
+                        break
+            
+            if relevant_docs:
+                context = "\n---\n".join(relevant_docs)
+                logger.info(f"[SMART_FALLBACK] ✅ Found broad semantic matches ({len(relevant_docs)} docs)")
+                
+                fallback_prompt = f"""
+{system_prompt}
+
+מידע רלוונטי מהמאגר:
+{context}
+
+שאלה: {question}
+
+ענה בהתבסס על המידע שלעיל. אם השאלה לא נענית במלואה, הסבר מה כן ידוע ותציע דרכים לקבל מידע נוסף.
+"""
+                
+                response = call_gpt_with_context(fallback_prompt, session, client, model="gpt-4-turbo")
+                if response and not is_truly_vague(response):
+                    session["fallback_used"] = "broad_semantic"
+                    session["history"].append({"role": "assistant", "content": response})
+                    logger.info(f"[SMART_FALLBACK] ✅ Success with broad semantic search")
+                    return response, session
+    
+    except Exception as e:
+        logger.error(f"[SMART_FALLBACK] Broad semantic search failed: {e}")
+    
+    # Step 3: Intelligent GPT-only response (no retrieval)
+    try:
+        logger.debug(f"[SMART_FALLBACK] Trying intelligent GPT-only response...")
+        
+        gpt_only_prompt = f"""
+{system_prompt}
+
+המשתמש שאל: "{question}"
+
+אין לי מידע ספציפי במאגר שעונה על השאלה הזו. תענה בצורה ידידותית וחכמה:
+1. הכר בכך שאין לך מידע ספציפי על השאלה
+2. תן תשובה כללית ומועילה אם אפשר (בלי להמציא עובדות)
+3. הפנה את המשתמש לשאול על נושאים שכן יש לך מידע עליהם (בוטים, שירות לקוחות, אוטומציה)
+4. הציע ליצור קשר לפרטים מדויקים יותר
+
+היה חם, אמפתי ומועיל - לא תתנצל יותר מדי או תיראה חסר ישע.
+"""
+        
+        response = call_gpt_with_context(gpt_only_prompt, session, client, model="gpt-3.5-turbo")
+        if response:
+            session["fallback_used"] = "gpt_only"
+            session["history"].append({"role": "assistant", "content": response})
+            logger.info(f"[SMART_FALLBACK] ✅ Generated intelligent GPT-only response")
+            return response, session
+    
+    except Exception as e:
+        logger.error(f"[SMART_FALLBACK] GPT-only response failed: {e}")
+    
+    # Step 4: Final graceful fallback
+    lang = detect_language(question)
+    if lang == "he":
+        final_response = """אני מבין שיש לך שאלה חשובה, ואני רוצה לוודא שתקבל תשובה מדויקת. 
+        
+🤖 אני מתמחה בעזרה עם בוטים חכמים, שירות לקוחות ואוטומציה לעסקים.
+
+איך אוכל לעזור לך בנושאים האלה? או שתרצה שמישהו מהצוות יחזור אליך עם תשובה מפורטת יותר?"""
+    else:
+        final_response = """I understand you have an important question, and I want to make sure you get an accurate answer.
+        
+🤖 I specialize in helping with smart chatbots, customer service, and business automation.
+
+How can I help you with these topics? Or would you like someone from our team to get back to you with a more detailed answer?"""
+    
+    session["fallback_used"] = "final_graceful"
+    session["history"].append({"role": "assistant", "content": final_response})
+    logger.info(f"[SMART_FALLBACK] ✅ Using final graceful fallback")
+    return final_response, session
+
+
+def call_gpt_with_context(prompt, session, client, model="gpt-4-turbo"):
+    """Helper function to call GPT with error handling"""
+    try:
+        history = session.get("history", [])
+        filtered_history = [msg for msg in history[-6:] if isinstance(msg.get("content"), str)]  # Last 6 messages
+        
+        messages = [{"role": "system", "content": prompt}] + filtered_history
+        
+        completion = client.chat.completions.create(
+            model=model,
+            messages=messages
+        )
+        return completion.choices[0].message.content.strip()
+    except Exception as e:
+        logger.error(f"[GPT_HELPER] Failed to call {model}: {e}")
+        return None
+
+
+def is_truly_vague(answer):
+    """More sophisticated vagueness detection that avoids false positives"""
+    if not answer or len(answer.strip()) < 15:
+        return True
+    
+    # Only flag as vague if it's REALLY generic
+    truly_vague_patterns = [
+        "i don't know anything",
+        "i have no information",
+        "i cannot help you at all",
+        "אין לי שום מידע",
+        "לא יכול לעזור"
+    ]
+    
+    answer_lower = answer.lower()
+    return any(pattern in answer_lower for pattern in truly_vague_patterns)
+
+
+def get_enhanced_context_with_fallbacks(question, intent_name, lang, collection):
+    """
+    Multi-layered knowledge retrieval with intelligent fallbacks
+    """
+    knowledge_docs = []
+    
+    # Layer 1: Try intent-specific retrieval
+    try:
+        logger.debug(f"[KNOWLEDGE] Layer 1: Intent-specific retrieval for '{intent_name}'")
+        knowledge_docs = get_enhanced_context_retrieval(question, intent_name, lang)
+        if knowledge_docs:
+            logger.info(f"[KNOWLEDGE] ✅ Layer 1 success: {len(knowledge_docs)} docs")
+            return knowledge_docs
+    except Exception as e:
+        logger.warning(f"[KNOWLEDGE] Layer 1 failed: {e}")
+    
+    # Layer 2: Try language-filtered retrieval (no intent)
+    try:
+        logger.debug(f"[KNOWLEDGE] Layer 2: Language-filtered retrieval")
+        results = collection.query(
+            query_texts=[question],
+            n_results=5,
+            where={"language": lang}
+        )
+        if results and results['documents'][0]:
+            docs = results['documents'][0]
+            metadatas = results['metadatas'][0] if results['metadatas'] else [{}] * len(docs)
+            knowledge_docs = [(doc, meta) for doc, meta in zip(docs, metadatas)]
+            logger.info(f"[KNOWLEDGE] ✅ Layer 2 success: {len(knowledge_docs)} docs")
+            return knowledge_docs
+    except Exception as e:
+        logger.warning(f"[KNOWLEDGE] Layer 2 failed: {e}")
+    
+    # Layer 3: Try broad search (no filters)
+    try:
+        logger.debug(f"[KNOWLEDGE] Layer 3: Broad search (no filters)")
+        results = collection.query(
+            query_texts=[question],
+            n_results=10
+        )
+        if results and results['documents'][0]:
+            docs = results['documents'][0]
+            metadatas = results['metadatas'][0] if results['metadatas'] else [{}] * len(docs)
+            
+            # Post-filter by language
+            filtered_docs = []
+            for doc, meta in zip(docs, metadatas):
+                doc_lang = meta.get('language', lang)
+                if doc_lang == lang:
+                    filtered_docs.append((doc, meta))
+                    if len(filtered_docs) >= 3:
+                        break
+            
+            if filtered_docs:
+                logger.info(f"[KNOWLEDGE] ✅ Layer 3 success: {len(filtered_docs)} docs")
+                return filtered_docs
+    except Exception as e:
+        logger.warning(f"[KNOWLEDGE] Layer 3 failed: {e}")
+    
+    logger.warning(f"[KNOWLEDGE] ❌ All retrieval layers failed")
+    return []
+
+
 def handle_question(question, session, collection, system_prompt, client, intents):
     logger.debug(f"\n{'='*60}")
     logger.info(f"[HANDLE_QUESTION] Starting processing for: '{question}'")
@@ -1396,30 +1656,22 @@ Let's talk about it - what type of business do you have and what's the main prob
     chroma_intent_result = final_intent_result
     
     if not chroma_intent_result:
-        logger.info(f"[INTENT_FINAL] ❌ No valid intent detected (distance > {Config.CHROMA_THRESHOLD} or no match). Skipping context phase.")
-        lang = detect_language(question)
-        if lang == "he":
-            return "מצטער, לא מצאתי מידע רלוונטי. אפשר לשאול משהו אחר או להשאיר פרטים? 😊", session
-        else:
-            return "Sorry, I couldn't find relevant information. You can ask something else or leave your details! 😊", session
+        logger.info(f"[INTENT_FINAL] ❌ No valid intent detected (distance > {Config.CHROMA_THRESHOLD} or no match). Activating smart fallback system.")
+        return handle_intent_failure(question, session, collection, system_prompt, client)
     
     logger.info(f"[INTENT_FINAL] ✅ Final intent selected: {chroma_intent_result}")
     intent_name, intent_meta = chroma_intent_result
     logger.debug(f"\n[KNOWLEDGE_RETRIEVAL] ======== STARTING KNOWLEDGE RETRIEVAL ========")
     logger.info(f"[KNOWLEDGE_RETRIEVAL] Intent: '{intent_name}'")
     
-    # 3. Enhanced knowledge retrieval to surface underutilized content
-    try:
-        logger.debug(f"[KNOWLEDGE_RETRIEVAL] Calling enhanced context retrieval...")
-        knowledge_start = time.time()
-        lang = detect_language(question)
-        knowledge_docs = get_enhanced_context_retrieval(question, intent_name, lang)
-        knowledge_time = time.time() - knowledge_start
-        logger.info(f"[PERFORMANCE] 🔍 Enhanced knowledge retrieval: {knowledge_time:.3f}s")
-        logger.info(f"[KNOWLEDGE_RETRIEVAL] ✅ Retrieved {len(knowledge_docs)} knowledge documents")
-    except Exception as e:
-        logger.error(f"[KNOWLEDGE_RETRIEVAL] ❌ Failed to retrieve knowledge for intent '{intent_name}': {e}")
-        knowledge_docs = []
+    # 3. Enhanced knowledge retrieval with layered fallbacks
+    logger.debug(f"[KNOWLEDGE_RETRIEVAL] Calling enhanced context retrieval with fallbacks...")
+    knowledge_start = time.time()
+    lang = detect_language(question)
+    knowledge_docs = get_enhanced_context_with_fallbacks(question, intent_name, lang, collection)
+    knowledge_time = time.time() - knowledge_start
+    logger.info(f"[PERFORMANCE] 🔍 Enhanced knowledge retrieval with fallbacks: {knowledge_time:.3f}s")
+    logger.info(f"[KNOWLEDGE_RETRIEVAL] ✅ Retrieved {len(knowledge_docs)} knowledge documents")
     
     # 3a. Retrieve few-shot examples for this intent
     logger.debug(f"[EXAMPLES] Calling get_examples_by_intent...")
