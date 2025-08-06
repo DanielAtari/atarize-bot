@@ -27,9 +27,9 @@ const AboutSection = () => (
     </ol>
     <h3 className="text-xl font-semibold mb-2">שאלות נפוצות:</h3>
     <ul className="list-disc pr-6 space-y-1">
-      <li><b>עלות הקמה?</b> ₪600. הטמעה באתר: ₪200</li>
+      <li><b>עלות הקמה?</b> ₪390 מחיר השקה (במקום ₪690). הטמעה: ₪200</li>
       <li><b>זמן אספקה?</b> 2–5 ימי עסקים</li>
-      <li><b>מה כוללות חבילות?</b> לפי הודעות (Basic / Pro / Business+)</li>
+      <li><b>מה כוללות חבילות?</b> לפי הודעות (Basic / Standard / Pro)</li>
       <li><b>שינוי תוכן?</b> כן, עדכונים קטנים כלולים</li>
       <li><b>תשלום?</b> הקמה + מנוי. אשראי/ביט/העברה</li>
     </ul>

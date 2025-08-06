@@ -15,7 +15,7 @@ const PricingSection = () => (
         <tbody>
           <tr>
             <td>🔹 בנייה חד-פעמית</td>
-            <td>₪600 כולל מע"מ</td>
+            <td><s>₪690</s> ₪390 (מחיר הרצה)</td>
           </tr>
           <tr>
             <td>➕ הטמעה באתר</td>
@@ -38,26 +38,31 @@ const PricingSection = () => (
         <tbody>
           <tr>
             <td>Basic</td>
-            <td>עד 100</td>
-            <td>₪49</td>
+            <td>עד 300</td>
+            <td>₪119</td>
             <td>עסקים קטנים</td>
           </tr>
           <tr>
-            <td>Pro</td>
-            <td>עד 500</td>
-            <td>₪149</td>
+            <td>Standard</td>
+            <td>עד 1,000</td>
+            <td>₪399</td>
             <td>עסקים בינוניים</td>
           </tr>
           <tr>
-            <td>Business+</td>
-            <td>עד 2,000</td>
-            <td>₪399</td>
+            <td>Pro</td>
+            <td>עד 3,000</td>
+            <td>₪1,190</td>
             <td>מותגים עם תנועה גבוהה</td>
           </tr>
         </tbody>
       </table>
     </div>
-    <div className="text-lg text-primary font-bold mt-6">📢 מבצע השקה: חודש ראשון חינם!</div>
+    <div className="text-sm text-muted-foreground mt-4 p-4 bg-muted/50 rounded-lg">
+      <strong>סה"כ הפעלה ראשונית:</strong><br/>
+      מחיר רגיל: ₪890 (₪690 + ₪200)<br/>
+      <span className="text-primary font-bold">מחיר השקה: ₪590 (₪390 + ₪200)</span>
+    </div>
+    <div className="text-lg text-primary font-bold mt-6">⚠️ מחיר השקה - ללקוחות ראשונים בלבד!</div>
   </section>
 );
 

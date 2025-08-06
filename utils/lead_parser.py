@@ -3,13 +3,43 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def detect_lead_info(text):
+    """Enhanced lead detection - requires ALL THREE: name, phone, email"""
+    text_lower = text.lower().strip()
+    
+    # Email detection (more comprehensive)
+    has_email = (
+        "@" in text and ("." in text.split("@")[-1] if "@" in text else False) or
+        any(domain in text_lower for domain in [".com", ".co.il", ".net", ".org", "gmail", "hotmail", "yahoo", "walla"]) or
+        any(word in text_lower for word in ["מייל", "email", "אימייל", "דוא\"ל"])
+    )
+    
+    # Phone detection (Israeli phone patterns)
+    has_phone = (
+        any(prefix in text for prefix in ["050", "052", "053", "054", "055", "056", "057", "058", "059"]) or
+        any(word in text_lower for word in ["טלפון", "נייד", "phone", "פלאפון", "מספר"]) or
+        bool(re.search(r'\b0\d{1,2}[-\s]?\d{7}\b', text))  # Phone number pattern
+    )
+    
+    # Name detection (comprehensive patterns)
+    has_name = (
+        any(word in text_lower for word in ["שמי", "שם שלי", "קוראים לי", "אני", "name", "my name"]) or
+        bool(re.search(r'\b[A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}\b', text)) or  # English full name pattern
+        bool(re.search(r'\b[א-ת]{2,}\s+[א-ת]{2,}\b', text)) or  # Hebrew name pattern
+        any(word in text_lower for word in ["שם מלא", "שמי הוא", "השם שלי"])
+    )
+    
+    logger.debug(f"[LEAD_DETECTION] Text: '{text}' | Email: {has_email} | Phone: {has_phone} | Name: {has_name}")
+    
+    # Require ALL THREE components for complete lead info
+    return has_email and has_phone and has_name
+
 def extract_lead_details(text):
     """Extract specific lead details from user text"""
     details = {
         'name': None,
         'phone': None,
-        'email': None,
-        'raw_text': text
+        'email': None
     }
     
     # Extract email
@@ -18,79 +48,54 @@ def extract_lead_details(text):
     if email_match:
         details['email'] = email_match.group()
     
-    # Extract phone number
-    phone_patterns = [
-        r'\b0\d{1,2}[-\s]?\d{7,8}\b',     # Israeli format
-        r'\b05\d[-\s]?\d{7}\b',           # Mobile format
-        r'\b\+972[-\s]?\d{8,9}\b',        # International format
-    ]
+    # Extract phone (Israeli format)
+    phone_pattern = r'\b0\d{1,2}[-\s]?\d{7}\b'
+    phone_match = re.search(phone_pattern, text)
+    if phone_match:
+        details['phone'] = phone_match.group()
     
-    for pattern in phone_patterns:
-        phone_match = re.search(pattern, text)
-        if phone_match:
-            details['phone'] = phone_match.group()
-            break
-    
-    # Extract name (careful patterns, focused on specific indicator contexts)
+    # Extract name (basic pattern)
     name_patterns = [
-        r'שמי\s+([א-ת]{2,}(?:\s+[א-ת]{2,})?)',    # "שמי דניאל" or "שמי דניאל כהן"
-        r'השם שלי\s+([א-ת]{2,}(?:\s+[א-ת]{2,})?)', # "השם שלי דניאל כהן"
-        r'אני\s+([א-ת]{2,}(?:\s+[א-ת]{2,})?)',     # "אני דניאל כהן"
-        r'name.*?([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?)',  # English name (max 2 words)
-        r'([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})',     # Full English name standalone (John Smith)
-        # NOTE: Removed problematic Hebrew standalone pattern that captured indicator words
+        r'\b[A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}\b',  # English names
+        r'\b[א-ת]{2,}\s+[א-ת]{2,}\b'  # Hebrew names
     ]
     
     for pattern in name_patterns:
         name_match = re.search(pattern, text)
         if name_match:
-            potential_name = name_match.group(1).strip()
-            # Validate extracted name: no phone/email keywords, reasonable length
-            excluded_keywords = ["נייד", "טלפון", "פלאפון", "phone", "mobile", "מייל", "אימייל", "email"]
-            if (len(potential_name) >= 2 and 
-                not any(keyword in potential_name.lower() for keyword in excluded_keywords) and
-                len(potential_name.split()) <= 3):  # Max 3 words for a name
-                details['name'] = potential_name
-                break
+            details['name'] = name_match.group()
+            break
     
-    # If no structured name found, look for name indicators (improved fallback)
-    if not details['name']:
-        text_lower = text.lower()
-        if any(word in text_lower for word in ["שמי", "name", "קוראים לי"]):
-            # Extract potential name after indicators
-            words = text.split()
-            for i, word in enumerate(words):
-                if word.lower() in ["שמי", "name", "קוראים"]:
-                    if i + 1 < len(words):
-                        # Take only the next word (first name) to avoid phone keywords
-                        potential_name = words[i + 1]
-                        # Validate: no phone/email keywords, reasonable length
-                        excluded_keywords = ["נייד", "טלפון", "פלאפון", "phone", "mobile", "מייל", "אימייל", "email"]
-                        if (len(potential_name) >= 2 and 
-                            not any(keyword in potential_name.lower() for keyword in excluded_keywords) and
-                            re.match(r'^[א-תA-Za-z]+$', potential_name)):  # Only letters
-                            details['name'] = potential_name
-                            break
-    
-    logger.debug(f"[LEAD_PARSER] Extracted details: {details}")
     return details
 
-def format_lead_notification(text):
-    """Create a formatted email notification for lead details"""
-    details = extract_lead_details(text)
+def format_lead_notification(lead_text):
+    """Format lead information for email notification"""
+    details = extract_lead_details(lead_text)
     
-    # Create formatted message
-    message_parts = ["🆕 NEW LEAD FROM CHATBOT", "=" * 40, ""]
+    formatted_message = f"""
+🆕 New Lead from Atarize Chatbot
+
+📋 Lead Details:
+👤 Name: {details.get('name', 'Not provided')}
+📞 Phone: {details.get('phone', 'Not provided')}
+📧 Email: {details.get('email', 'Not provided')}
+
+💬 Original Message:
+{lead_text}
+
+⏰ Timestamp: {logger.handlers[0].formatter.formatTime(logger.makeRecord('', 0, '', 0, '', (), None)) if logger.handlers else 'Unknown'}
+
+---
+This lead was automatically detected by the Atarize chatbot.
+Please follow up promptly!
+"""
     
-    if details['name']:
-        message_parts.append(f"👤 NAME: {details['name']}")
-    
-    if details['phone']:
-        message_parts.append(f"📞 PHONE: {details['phone']}")
-    
-    if details['email']:
-        message_parts.append(f"📧 EMAIL: {details['email']}")
-    
-    message_parts.extend(["", "📝 FULL MESSAGE:", "-" * 20, details['raw_text']])
-    
-    return "\n".join(message_parts)
+    return formatted_message
+
+def parse_lead_info(text):
+    """Extract lead information from text"""
+    # This is a placeholder - you can enhance this to extract actual values
+    return {
+        'has_lead_info': detect_lead_info(text),
+        'text': text
+    }

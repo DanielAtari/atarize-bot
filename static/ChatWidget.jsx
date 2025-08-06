@@ -4,7 +4,7 @@ const ChatWidget = () => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "שלום! אני העוזר החכם שלך. איך אפשר לעזור?",
+      text: "נסו אותי ↓",
       isBot: true,
     }
   ]);

@@ -1,326 +1,449 @@
 #!/usr/bin/env python3
 """
-Comprehensive QA Test Suite for Chatbot Edge Cases and Flow Analysis
+🚨 CRITICAL QA TEST SUITE - Pre-Production Validation
+Tests for message repetition, context memory, intent handling, lead collection, and language consistency.
 """
 
-import requests
-import json
+import sys
+import os
 import time
-from utils.validation_utils import detect_lead_info
-from utils.text_utils import detect_language, is_greeting, is_small_talk
-from utils.lead_parser import extract_lead_details
+import json
+from datetime import datetime
 
-class ChatbotQATester:
-    def __init__(self, base_url="http://localhost:5050"):
-        self.base_url = base_url
-        self.findings = []
-        self.test_results = []
-    
-    def add_finding(self, severity, category, description, location=None):
-        """Add a finding to the report"""
-        self.findings.append({
-            "severity": severity,  # "CRITICAL", "HIGH", "MEDIUM", "LOW"
-            "category": category,
-            "description": description,
-            "location": location
-        })
-        print(f"🔍 [{severity}] {category}: {description}")
-    
-    def test_api_call(self, message, description=""):
-        """Make API call to chatbot"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/api/chat",
-                json={"question": message},
-                headers={"Content-Type": "application/json"},
-                timeout=15
-            )
+# Add the project root to Python path
+sys.path.append('.')
+
+from services.chat_service import ChatService
+from core.database import DatabaseManager
+from core.optimized_openai_client import OpenAIClient
+
+class ComprehensiveQATest:
+    def __init__(self):
+        """Initialize test environment"""
+        print("🚨 CRITICAL QA TEST SUITE - Pre-Production Validation")
+        print("="*70)
+        
+        # Initialize services
+        self.db_manager = DatabaseManager()
+        self.openai_client = OpenAIClient().get_client()
+        self.chat_service = ChatService(self.db_manager, self.openai_client)
+        
+        # Test results storage
+        self.test_results = {
+            "timestamp": datetime.now().isoformat(),
+            "total_tests": 0,
+            "passed_tests": 0,
+            "failed_tests": 0,
+            "critical_issues": [],
+            "personas": {}
+        }
+        
+        # Define personas with conversation flows
+        self.personas = {
+            "eager_buyer": {
+                "name": "Eager Buyer (Hebrew)",
+                "messages": [
+                    "היי, אני רוצה לקנות בוט לעסק שלי",
+                    "כמה זה עולה?", 
+                    "נשמע מעולה, איך ממשיכים?",
+                    "אני דני כהן, 0501234567, dani@example.com",
+                    "תודה רבה"
+                ],
+                "checks": ["no_repetition", "buying_intent", "lead_collection", "proper_closure"]
+            },
             
-            if response.status_code == 200:
-                result = response.json()
-                bot_response = result.get("answer", "")
-                self.test_results.append({
-                    "input": message,
-                    "output": bot_response,
-                    "description": description,
-                    "status": "SUCCESS"
-                })
-                return bot_response
-            else:
-                self.test_results.append({
-                    "input": message,
-                    "output": f"HTTP {response.status_code}",
-                    "description": description,
-                    "status": "ERROR"
-                })
-                return None
-                
-        except Exception as e:
-            self.test_results.append({
-                "input": message,
-                "output": f"Exception: {e}",
-                "description": description,
-                "status": "FAILED"
-            })
-            return None
-    
-    def test_edge_cases(self):
-        """Test various edge cases and conversation flows"""
-        
-        print("🧪 TESTING EDGE CASES AND CONVERSATION FLOWS")
-        print("=" * 60)
-        
-        # 1. LANGUAGE DETECTION EDGE CASES
-        print("\n1️⃣ LANGUAGE DETECTION EDGE CASES")
-        edge_language_cases = [
-            ("", "Empty string"),
-            ("123456", "Numbers only"),
-            ("!@#$%", "Special characters only"),
-            ("hello שלום", "Mixed languages"),
-            ("שלום123", "Hebrew with numbers"),
-            ("email@test.com", "Email without context"),
-        ]
-        
-        for text, desc in edge_language_cases:
-            detected = detect_language(text)
-            print(f"  '{text}' → {detected} ({desc})")
-            if text == "" and detected != "he":
-                self.add_finding("MEDIUM", "Language Detection", 
-                               f"Empty string detected as '{detected}' instead of fallback", 
-                               "utils/text_utils.py:detect_language")
-        
-        # 2. GREETING DETECTION EDGE CASES
-        print("\n2️⃣ GREETING DETECTION EDGE CASES")
-        greeting_cases = [
-            ("שלום!", "Hebrew greeting with punctuation"),
-            ("  hi  ", "English greeting with spaces"),
-            ("שלוםםם", "Hebrew greeting with typo"),
-            ("helloooo", "English greeting with extra letters"),
-            ("היי איך הולך?", "Greeting with question"),
-            ("Hi there how are you?", "Complex English greeting"),
-        ]
-        
-        for text, desc in greeting_cases:
-            is_greet = is_greeting(text)
-            print(f"  '{text}' → {is_greet} ({desc})")
-        
-        # 3. LEAD DETECTION EDGE CASES
-        print("\n3️⃣ LEAD DETECTION EDGE CASES")
-        lead_cases = [
-            ("שמי דניאל", "Name only"),
-            ("050-1234567", "Phone only"),
-            ("test@email.com", "Email only"),
-            ("דניאל 050-1234567", "Name + phone"),
-            ("דניאל test@email.com", "Name + email"),
-            ("050-1234567 test@email.com", "Phone + email"),
-            ("שמי דניאל נייד 050-1234567 אימייל test@email.com", "All three with keywords"),
-            ("name: John phone: 052-1234567 email: john@test.com", "English structured"),
-            ("John Smith 052-1234567 john@test.com", "English compact"),
-            ("שמי דניאל, טלפון 050-1234567, מייל: invalid-email", "Invalid email"),
-            ("שמי ד, טלפון 050-1234567, מייל test@email.com", "Very short name"),
-        ]
-        
-        for text, desc in lead_cases:
-            detected = detect_lead_info(text)
-            details = extract_lead_details(text)
-            print(f"  '{text}' → {detected} ({desc})")
-            print(f"    Details: Name='{details.get('name')}', Phone='{details.get('phone')}', Email='{details.get('email')}'")
+            "skeptical_user": {
+                "name": "Skeptical User (Mixed Languages)",
+                "messages": [
+                    "Hi, what is this service?",
+                    "איך זה עובד?",
+                    "מה היתרונות?",
+                    "Sounds complicated",
+                    "Maybe I'll think about it"
+                ],
+                "checks": ["no_repetition", "context_memory", "language_consistency", "no_premature_lead"]
+            },
             
-            # Check for potential false positives/negatives
-            if text == "דניאל 050-1234567" and detected:
-                self.add_finding("MEDIUM", "Lead Detection", 
-                               "Two-component lead detected as complete (missing email)",
-                               "utils/validation_utils.py:detect_lead_info")
-        
-        # 4. CONVERSATION FLOW TESTING
-        print("\n4️⃣ CONVERSATION FLOW TESTING")
-        
-        # Test 4a: Basic greeting flow
-        print("\n  4a. Basic Greeting Flow")
-        resp1 = self.test_api_call("שלום", "Initial greeting")
-        if resp1:
-            if "שלום" not in resp1 and "היי" not in resp1:
-                self.add_finding("HIGH", "Greeting Flow", 
-                               "Bot didn't respond appropriately to Hebrew greeting")
-        
-        # Test 4b: Follow-up after greeting
-        resp2 = self.test_api_call("מה שלומך?", "Follow-up after greeting")
-        if resp2 and resp2 == resp1:
-            self.add_finding("HIGH", "Conversation Continuity", 
-                           "Bot gave identical response to different questions")
-        
-        # Test 4c: Topic switching
-        resp3 = self.test_api_call("כמה עולה השירות?", "Topic switch to pricing")
-        resp4 = self.test_api_call("איך עובד הבוט?", "Topic switch to technical")
-        
-        # Test 4d: Vague/short inputs
-        print("\n  4d. Vague/Short Input Testing")
-        vague_inputs = ["", "  ", "?", "אה", "hmm", "..."]
-        for inp in vague_inputs:
-            resp = self.test_api_call(inp, f"Vague input: '{inp}'")
-            if resp and "name" not in resp.lower() and "phone" not in resp.lower():
-                self.add_finding("MEDIUM", "Vague Input Handling", 
-                               f"Input '{inp}' didn't trigger lead collection")
-        
-        # Test 4e: Lead collection flow
-        print("\n  4e. Lead Collection Flow")
-        
-        # Trigger lead collection
-        resp_trigger = self.test_api_call("לא יודע", "Trigger lead collection")
-        
-        # Test partial lead info
-        resp_partial = self.test_api_call("שמי דניאל", "Partial lead info")
-        
-        # Test exit phrases
-        exit_phrases = ["עזוב", "לא רוצה", "די"]
-        for phrase in exit_phrases:
-            resp_exit = self.test_api_call(phrase, f"Exit phrase: {phrase}")
-            if resp_exit and "בסדר" not in resp_exit:
-                self.add_finding("MEDIUM", "Lead Exit Flow", 
-                               f"Exit phrase '{phrase}' didn't reset lead mode properly")
-        
-        # Test 4f: Language switching mid-conversation
-        print("\n  4f. Language Switching")
-        self.test_api_call("שלום, איך אתה?", "Hebrew question")
-        resp_eng = self.test_api_call("How much does it cost?", "Switch to English")
-        resp_heb = self.test_api_call("תודה רבה", "Switch back to Hebrew")
-        
-        # Test 4g: Repeated identical messages
-        print("\n  4g. Repeated Messages")
-        msg = "כמה עולה השירות?"
-        resp1 = self.test_api_call(msg, "First identical message")
-        resp2 = self.test_api_call(msg, "Second identical message")
-        resp3 = self.test_api_call(msg, "Third identical message")
-        
-        if resp1 == resp2 == resp3:
-            self.add_finding("LOW", "Conversation Variety", 
-                           "Bot gives identical responses to repeated questions")
-        
-        # Test 4h: Very long input
-        print("\n  4h. Long Input Testing")
-        long_input = "שלום " * 100 + " איך אתה?"
-        resp_long = self.test_api_call(long_input, "Very long input")
-        
-        # Test 4i: Special characters and emojis
-        print("\n  4i. Special Characters")
-        special_inputs = [
-            "שלום! 😊 איך אתה?",
-            "What's the price??? 💰",
-            "Email: test@email.com (urgent!!!)",
-            "Name: John O'Connor, Phone: 050-123-4567"
-        ]
-        
-        for inp in special_inputs:
-            self.test_api_call(inp, f"Special chars: {inp}")
-    
-    def test_variable_initialization(self):
-        """Test for uninitialized variables by analyzing code paths"""
-        print("\n5️⃣ VARIABLE INITIALIZATION ANALYSIS")
-        
-        # This would require static analysis, but we can check key patterns
-        critical_vars = [
-            "overall_start_time", "answer", "intent_name", "lang", 
-            "completion", "lead_details", "email_success"
-        ]
-        
-        # Check if variables are initialized in all paths
-        # (This is a simplified check - would need full static analysis for complete coverage)
-        
-        print("  Variables that should be initialized in ALL code paths:")
-        for var in critical_vars:
-            print(f"    - {var}")
-        
-        # We already fixed overall_start_time, but let's note potential issues
-        self.add_finding("LOW", "Code Quality", 
-                       "Review variable initialization in all exception paths",
-                       "services/chat_service.py:handle_question")
-    
-    def analyze_hardcoded_responses(self):
-        """Analyze for hardcoded responses that bypass GPT"""
-        print("\n6️⃣ HARDCODED RESPONSE ANALYSIS")
-        
-        hardcoded_patterns = [
-            "Sorry, I couldn't understand",
-            "Sorry, I couldn't find a good answer", 
-            "Sorry, I encountered an error",
-            "Please include your name, phone, and email",
-            "Thank you for your message! We already have your details"
-        ]
-        
-        for pattern in hardcoded_patterns:
-            print(f"  Found hardcoded: '{pattern}'")
-        
-        self.add_finding("MEDIUM", "Response Quality", 
-                       "Multiple hardcoded responses that bypass GPT's natural language generation",
-                       "services/chat_service.py")
-    
-    def generate_report(self):
-        """Generate comprehensive QA report"""
-        print("\n" + "="*80)
-        print("📋 COMPREHENSIVE QA REPORT")
-        print("="*80)
-        
-        # Summary
-        total_tests = len(self.test_results)
-        successful_tests = len([t for t in self.test_results if t["status"] == "SUCCESS"])
-        
-        print(f"\n📊 TEST SUMMARY:")
-        print(f"   Total Tests: {total_tests}")
-        print(f"   Successful: {successful_tests}")
-        print(f"   Failed: {total_tests - successful_tests}")
-        
-        # Findings by severity
-        findings_by_severity = {}
-        for finding in self.findings:
-            sev = finding["severity"]
-            if sev not in findings_by_severity:
-                findings_by_severity[sev] = []
-            findings_by_severity[sev].append(finding)
-        
-        print(f"\n🔍 FINDINGS BY SEVERITY:")
-        for severity in ["CRITICAL", "HIGH", "MEDIUM", "LOW"]:
-            if severity in findings_by_severity:
-                print(f"\n   {severity} ({len(findings_by_severity[severity])} issues):")
-                for finding in findings_by_severity[severity]:
-                    print(f"     • {finding['category']}: {finding['description']}")
-                    if finding['location']:
-                        print(f"       Location: {finding['location']}")
-        
-        # Recommendations
-        print(f"\n💡 RECOMMENDATIONS:")
-        print("   1. Add input sanitization for edge cases (empty strings, special chars)")
-        print("   2. Improve natural language fallbacks to reduce hardcoded responses")
-        print("   3. Add conversation memory to avoid repetitive responses")
-        print("   4. Enhance lead detection to handle partial info more gracefully")
-        print("   5. Add comprehensive error handling for all code paths")
-        print("   6. Consider adding typing indicators for longer processing")
-        print("   7. Implement conversation context awareness")
-        
-        return {
-            "total_tests": total_tests,
-            "successful_tests": successful_tests,
-            "findings": self.findings,
-            "test_results": self.test_results
+            "confused_user": {
+                "name": "Confused User (Short Responses)",
+                "messages": [
+                    "מה?",
+                    "לא הבנתי",
+                    "אוקיי",
+                    "כן",
+                    "למה?"
+                ],
+                "checks": ["no_repetition", "context_memory", "helpful_responses", "no_loops"]
+            },
+            
+            "price_focused": {
+                "name": "Price-Focused User",
+                "messages": [
+                    "כמה עולה הבוט?",
+                    "זה יקר",
+                    "יש הנחה?",
+                    "מה כלול במחיר?",
+                    "אוקיי תן לי לחשוב"
+                ],
+                "checks": ["no_repetition", "consistent_pricing", "context_memory", "no_contradictions"]
+            },
+            
+            "technical_user": {
+                "name": "Technical User",
+                "messages": [
+                    "איך הבוט עובד מבחינה טכנית?",
+                    "איזה טכנולוגיות אתם משתמשים?",
+                    "יש אינטגרציה עם CRM?",
+                    "מה לגבי אבטחה?",
+                    "נשמע טוב"
+                ],
+                "checks": ["no_repetition", "technical_accuracy", "context_memory", "follow_up_offers"]
+            },
+            
+            "restaurant_owner": {
+                "name": "Restaurant Owner (Specific Use Case)",
+                "messages": [
+                    "יש לי מסעדה, איך הבוט יכול לעזור לי?",
+                    "הבוט יכול לקבל הזמנות?",
+                    "מה לגבי תפריט?",
+                    "כמה זה עולה למסעדה?",
+                    "אני מעוניין, מה הצעד הבא?"
+                ],
+                "checks": ["no_repetition", "use_case_specific", "buying_intent", "lead_collection"]
+            },
+            
+            "yes_sayer": {
+                "name": "Yes Sayer (Repetitive Responses)",
+                "messages": [
+                    "כן",
+                    "כן",  
+                    "כן",
+                    "אוקיי",
+                    "כן"
+                ],
+                "checks": ["no_repetition", "context_progression", "no_loops", "intelligent_handling"]
+            },
+            
+            "english_user": {
+                "name": "English User",
+                "messages": [
+                    "Hello, I want to buy a chatbot",
+                    "How much does it cost?",
+                    "Great, how do we proceed?", 
+                    "I'm John Smith, 0501234567, john@example.com",
+                    "Thank you"
+                ],
+                "checks": ["no_repetition", "english_support", "buying_intent", "lead_collection"]
+            },
+            
+            "undecided_user": {
+                "name": "Undecided User",
+                "messages": [
+                    "אני לא בטוח אם אני צריך בוט",
+                    "תספר לי עוד",
+                    "מה היתרונות?",
+                    "נשמע מעניין אבל אני עדיין לא בטוח",
+                    "אוקיי תן לי לחשוב על זה"
+                ],
+                "checks": ["no_repetition", "context_memory", "no_pressure_selling", "helpful_info"]
+            },
+            
+            "quick_buyer": {
+                "name": "Quick Buyer (Fast Decision)",
+                "messages": [
+                    "אני רוצה לקנות בוט עכשיו",
+                    "מה הפרטים שלי צריכים?",
+                    "רחל לוי, 0507654321, rachel@business.co.il",
+                    "מתי נתחיל?",
+                    "מעולה"
+                ],
+                "checks": ["no_repetition", "immediate_buying_intent", "efficient_lead_collection", "quick_closure"]
+            }
         }
 
-def main():
-    """Run comprehensive QA testing"""
-    print("🚀 STARTING COMPREHENSIVE CHATBOT QA TESTING")
-    print("This will test edge cases, conversation flows, and robustness")
-    print("="*80)
-    
-    tester = ChatbotQATester()
-    
-    # Run all test suites
-    tester.test_edge_cases()
-    tester.test_variable_initialization()
-    tester.analyze_hardcoded_responses()
-    
-    # Generate final report
-    report = tester.generate_report()
-    
-    print("\n🏁 QA TESTING COMPLETE!")
-    print(f"Generated {len(report['findings'])} findings across {report['total_tests']} tests")
+    def create_clean_session(self):
+        """Create a clean session for each test"""
+        return {
+            "history": [],
+            "greeted": False,
+            "intro_given": False,
+            "lead_collected": False,
+            "interested_lead_pending": False,
+            "product_market_fit_detected": False
+        }
+
+    def check_no_repetition(self, conversation_history):
+        """Check for repeated identical messages"""
+        issues = []
+        bot_responses = [msg["content"] for msg in conversation_history if msg["role"] == "assistant"]
+        
+        for i in range(1, len(bot_responses)):
+            if bot_responses[i] == bot_responses[i-1]:
+                issues.append(f"🚨 REPEATED MESSAGE: '{bot_responses[i][:50]}...'")
+        
+        return issues
+
+    def check_context_memory(self, conversation_history, messages):
+        """Check if bot remembers context from previous messages"""
+        issues = []
+        
+        # Look for signs that the bot is answering the same question multiple times
+        topics_answered = set()
+        for i, msg in enumerate(conversation_history):
+            if msg["role"] == "assistant":
+                content = msg["content"].lower()
+                
+                # Note: Automatic pricing detection removed - all responses now come from context only
+                
+                # Check for introduction repetition
+                if "עטרה" in content and "atarize" in content.lower():
+                    if "introduction" in topics_answered:
+                        issues.append(f"🚨 CONTEXT MEMORY ISSUE: Introduction repeated")
+                    topics_answered.add("introduction")
+        
+        return issues
+
+    def check_buying_intent_handling(self, conversation_history, session_states):
+        """Check if buying intent is properly detected and handled"""
+        issues = []
+        
+        buying_signals = ["רוצה לקנות", "want to buy", "מעוניין", "interested"]
+        lead_collection_started = False
+        
+        for i, msg in enumerate(conversation_history):
+            if msg["role"] == "user":
+                user_message = msg["content"].lower()
+                
+                # Check if user showed buying intent
+                has_buying_intent = any(signal in user_message for signal in buying_signals)
+                
+                if has_buying_intent:
+                    # Check if next bot response asks for lead info (Hebrew or English)
+                    if i + 1 < len(conversation_history):
+                        next_response = conversation_history[i + 1]["content"].lower()
+                        hebrew_patterns = ["פרטים", "שם", "טלפון", "אימייל"]
+                        english_patterns = ["details", "name", "phone", "email", "full name"]
+                        
+                        asks_for_details = (
+                            any(pattern in next_response for pattern in hebrew_patterns) or
+                            any(pattern in next_response for pattern in english_patterns)
+                        )
+                        
+                        if asks_for_details:
+                            lead_collection_started = True
+                        else:
+                            issues.append(f"🚨 BUYING INTENT MISSED: No lead collection after '{msg['content'][:30]}...'")
+        
+        return issues
+
+    def check_lead_collection_flow(self, conversation_history, session_states):
+        """Check if lead collection flow works properly"""
+        issues = []
+        
+        lead_info_patterns = ["@", "050", "052", "053", "054", "055"]
+        lead_provided = False
+        lead_confirmed = False
+        
+        for i, msg in enumerate(conversation_history):
+            if msg["role"] == "user":
+                user_message = msg["content"]
+                
+                # Check if user provided lead info
+                has_lead_info = any(pattern in user_message for pattern in lead_info_patterns)
+                
+                if has_lead_info:
+                    lead_provided = True
+                    # Check if next bot response confirms receipt (Hebrew or English)
+                    if i + 1 < len(conversation_history):
+                        next_response = conversation_history[i + 1]["content"].lower()
+                        hebrew_confirmations = ["תודה", "קיבלנו", "רשמנו", "מעולה", "יופי"]
+                        english_confirmations = ["thank", "received", "got your", "perfect", "great", "wonderful", "we have"]
+                        
+                        has_confirmation = (
+                            any(conf in next_response for conf in hebrew_confirmations) or
+                            any(conf in next_response for conf in english_confirmations)
+                        )
+                        
+                        if has_confirmation:
+                            lead_confirmed = True
+                        else:
+                            issues.append(f"🚨 LEAD COLLECTION ISSUE: No confirmation after lead provided")
+        
+        return issues
+
+    def check_language_consistency(self, conversation_history):
+        """Check for language handling issues"""
+        issues = []
+        
+        for msg in conversation_history:
+            if msg["role"] == "assistant":
+                content = msg["content"]
+                
+                # Check for mixed inappropriate language switches
+                has_hebrew = any(char in content for char in 'אבגדהוזחטיכלמנסעפצקרשתךםןףץ')
+                has_english = any(char.isalpha() and ord(char) < 128 for char in content)
+                
+                if has_hebrew and has_english:
+                    # This is fine for mixed conversations, but check for weird switches
+                    if "hello שלום" in content.lower() or similar_weird_patterns(content):
+                        issues.append(f"🚨 LANGUAGE ISSUE: Weird language mixing in '{content[:50]}...'")
+        
+        return issues
+
+    def run_persona_test(self, persona_key, persona_data):
+        """Run test for a specific persona"""
+        print(f"\n🧪 Testing Persona: {persona_data['name']}")
+        print("-" * 50)
+        
+        session = self.create_clean_session()
+        conversation_history = []
+        session_states = []
+        all_issues = []
+        
+        for i, message in enumerate(persona_data["messages"]):
+            print(f"{i+1}. 🙋 User: {message}")
+            
+            try:
+                # Get response from chat service
+                response, session = self.chat_service.handle_question(message, session)
+                
+                # Store conversation
+                conversation_history.append({"role": "user", "content": message})
+                conversation_history.append({"role": "assistant", "content": response})
+                session_states.append(dict(session))
+                
+                print(f"   🤖 Bot: {response[:100]}{'...' if len(response) > 100 else ''}")
+                
+                # Real-time issue detection
+                if i > 0:  # Skip first message
+                    recent_issues = self.check_no_repetition(conversation_history[-4:])
+                    if recent_issues:
+                        all_issues.extend(recent_issues)
+                        print(f"   ⚠️  {recent_issues[0]}")
+                
+            except Exception as e:
+                error_msg = f"🚨 CRITICAL ERROR: {str(e)}"
+                all_issues.append(error_msg)
+                print(f"   {error_msg}")
+                break
+        
+        # Run comprehensive checks
+        print(f"\n📋 Running checks for {persona_data['name']}...")
+        
+        if "no_repetition" in persona_data["checks"]:
+            repetition_issues = self.check_no_repetition(conversation_history)
+            all_issues.extend(repetition_issues)
+        
+        if "context_memory" in persona_data["checks"]:
+            memory_issues = self.check_context_memory(conversation_history, persona_data["messages"])
+            all_issues.extend(memory_issues)
+        
+        if "buying_intent" in persona_data["checks"]:
+            intent_issues = self.check_buying_intent_handling(conversation_history, session_states)
+            all_issues.extend(intent_issues)
+        
+        if "lead_collection" in persona_data["checks"]:
+            lead_issues = self.check_lead_collection_flow(conversation_history, session_states)
+            all_issues.extend(lead_issues)
+        
+        if "language_consistency" in persona_data["checks"]:
+            language_issues = self.check_language_consistency(conversation_history)
+            all_issues.extend(language_issues)
+        
+        # Store results
+        self.test_results["personas"][persona_key] = {
+            "name": persona_data["name"],
+            "conversation": conversation_history,
+            "issues": all_issues,
+            "passed": len(all_issues) == 0
+        }
+        
+        # Display results
+        if all_issues:
+            print(f"❌ FAILED: {len(all_issues)} issues found")
+            for issue in all_issues:
+                print(f"   {issue}")
+            self.test_results["failed_tests"] += 1
+            self.test_results["critical_issues"].extend(all_issues)
+        else:
+            print(f"✅ PASSED: No issues found")
+            self.test_results["passed_tests"] += 1
+        
+        self.test_results["total_tests"] += 1
+
+    def run_all_tests(self):
+        """Run all persona tests"""
+        print("🚀 Starting Comprehensive QA Test Suite...")
+        print(f"📊 Testing {len(self.personas)} personas with critical issue detection\n")
+        
+        start_time = time.time()
+        
+        for persona_key, persona_data in self.personas.items():
+            self.run_persona_test(persona_key, persona_data)
+            time.sleep(0.5)  # Small delay between tests
+        
+        end_time = time.time()
+        
+        # Generate final report
+        self.generate_final_report(end_time - start_time)
+
+    def generate_final_report(self, test_duration):
+        """Generate comprehensive QA report"""
+        print("\n" + "="*70)
+        print("🏆 COMPREHENSIVE QA TEST RESULTS")
+        print("="*70)
+        
+        print(f"📊 Overall Statistics:")
+        print(f"   Total Tests: {self.test_results['total_tests']}")
+        print(f"   Passed: {self.test_results['passed_tests']}")
+        print(f"   Failed: {self.test_results['failed_tests']}")
+        print(f"   Success Rate: {(self.test_results['passed_tests']/self.test_results['total_tests']*100):.1f}%")
+        print(f"   Test Duration: {test_duration:.2f} seconds")
+        
+        # Critical issues summary
+        if self.test_results["critical_issues"]:
+            print(f"\n🚨 CRITICAL ISSUES FOUND ({len(self.test_results['critical_issues'])}):")
+            issue_types = {}
+            for issue in self.test_results["critical_issues"]:
+                issue_type = issue.split(":")[0].strip()
+                issue_types[issue_type] = issue_types.get(issue_type, 0) + 1
+            
+            for issue_type, count in issue_types.items():
+                print(f"   {issue_type}: {count} occurrences")
+        
+        # Persona-specific results
+        print(f"\n📋 Detailed Results by Persona:")
+        for persona_key, results in self.test_results["personas"].items():
+            status = "✅ PASS" if results["passed"] else "❌ FAIL"
+            issue_count = len(results["issues"])
+            print(f"   {status} {results['name']} ({issue_count} issues)")
+        
+        # Save detailed report to file
+        report_filename = f"qa_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(report_filename, 'w', encoding='utf-8') as f:
+            json.dump(self.test_results, f, ensure_ascii=False, indent=2)
+        
+        print(f"\n📄 Detailed report saved to: {report_filename}")
+        
+        # Final verdict
+        if self.test_results["failed_tests"] > 0:
+            print(f"\n🚨 VERDICT: FAILED - {self.test_results['failed_tests']} tests failed")
+            print("🛑 RECOMMENDATION: DO NOT DEPLOY TO PRODUCTION")
+            print("🔧 ACTION REQUIRED: Fix critical issues before launch")
+        else:
+            print(f"\n🎉 VERDICT: PASSED - All tests successful!")
+            print("✅ RECOMMENDATION: Ready for production deployment")
+
+def similar_weird_patterns(content):
+    """Check for weird language pattern issues"""
+    weird_patterns = [
+        "hello שלום",
+        "hi היי", 
+        "thank תודה",
+        "yes כן"
+    ]
+    return any(pattern in content.lower() for pattern in weird_patterns)
 
 if __name__ == "__main__":
-    main()
+    qa_test = ComprehensiveQATest()
+    qa_test.run_all_tests()

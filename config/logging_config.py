@@ -8,7 +8,7 @@ def setup_logging():
     
     # Configure logging for both development and production
     logging.basicConfig(
-        level=logging.DEBUG,  # Change to INFO in production
+        level=logging.INFO,  # Reduced logging for testing
         format='%(asctime)s [%(levelname)s] %(message)s',
         handlers=[
             logging.FileHandler("logs/app.log", encoding='utf-8'),
