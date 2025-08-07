@@ -17,7 +17,7 @@ const ContactSection = () => {
     setSuccess(false);
     try {
       const apiUrl = import.meta.env.VITE_API_BASE_URL
-        ? `${import.meta.env.VITE_API_BASE_URL}/api/contact`
+        ? `${import.meta.env.VITE_API_BASE_URL}/contact`
         : '/api/contact';
       const res = await fetch(apiUrl, {
         method: 'POST',
