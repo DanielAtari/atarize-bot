@@ -209,7 +209,7 @@ def is_vague_gpt_answer(answer):
         "i have no information about", 
         "i cannot help you with this",
         "i'm not able to assist",
-        "אין לי שום מידע על",
+        "אין לי שום מידע על",‎
         "לא יכול לעזור עם זה",
         "לא מוכר לי"
     ]
