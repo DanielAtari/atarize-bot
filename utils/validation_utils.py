@@ -14,13 +14,20 @@ def detect_buying_intent(text):
         "אני רוצה להזמין", "רוצה להזמין", "רוצה את השירות", "רוצה בוט",
         "אני רוצה להתחיל", "רוצה להתחיל", "איך אפשר להתחיל", "איך מתחילים",
         "אני רוצה לעשות בוט", "רוצה לעשות בוט", "אני מעוניינת לקנות", "מעוניינת לקנות",
+        # 🔧 QA FIX: Additional Hebrew buying intent patterns
+        "אני רוצה להמשיך", "רוצה להמשיך", "בואו נתחיל", "בואו נמשיך",
+        "אני מוכן להתחיל", "מוכנה להתחיל", "יש לי כבר את המחירים", "אני כבר יודע את המחיר",
         
         # English buying intent - ONLY direct commitment phrases  
         "i want to buy", "want to buy", "want to purchase", "i want to purchase",
         "i want to order", "want to order", "want your service", "want a bot",
         "i want to get started", "how do i get started", "how to get started",
         "i want to create a bot", "want to create a bot", "hello, i want to buy",
-        "i want to buy a chatbot", "want to buy a chatbot", "want a chatbot"
+        "i want to buy a chatbot", "want to buy a chatbot", "want a chatbot",
+        # 🔧 QA FIX: Additional English buying intent patterns
+        "i want to proceed", "want to proceed", "let's move forward", "let's get started",
+        "i'm ready to start", "ready to start", "i already know your pricing", "i know the pricing",
+        "let's do this", "i'm ready", "ready to proceed", "want to move forward"
     ]
     
     # Check for buying intent patterns FIRST

@@ -63,9 +63,9 @@ class ChatService:
             session["session_id"] = session_id
         return session["session_id"]
     
-    def handle_question(self, question, session):
+    def handle_question(self, question, session, lang=None):
         """
-        Main chat handling logic - modular version of the original handle_question
+        Main chat handling logic - Fixed version with consistent intent detection
         """
         # Performance timing
         import time
@@ -75,8 +75,15 @@ class ChatService:
         answer = None
         intent_name = "unknown"
         
+        # 🔧 FIX: LANGUAGE DETECTION FALLBACK
+        if not lang:
+            lang = detect_language(question)
+            logger.debug(f"[LANGUAGE_FALLBACK] Auto-detected language: {lang} for question: '{question[:30]}...'")
+        else:
+            logger.debug(f"[LANGUAGE_PROVIDED] Using provided language: {lang}")
+        
         logger.debug(f"\n{'='*60}")
-        logger.info(f"[CHAT_SERVICE] Starting processing for: '{question}'")
+        logger.info(f"[CHAT_SERVICE] Starting processing for: '{question}' (lang: {lang})")
         
         # Initialize session keys if they don't exist
         if "history" not in session:
@@ -94,6 +101,31 @@ class ChatService:
         # Validate session state consistency
         self._validate_session_state(session)
         
+        # 🔧 FIX 1: CONSISTENT INTENT DETECTION AT START
+        from services.intent_service import IntentService
+        intent_service = IntentService(self.db_manager)
+        intent_name = intent_service.detect_intent_chroma(question)
+        if not intent_name:
+            intent_name = "unknown"
+        logger.info(f"[INTENT_DETECTION] Detected intent: {intent_name} for question: '{question[:50]}...'")
+        
+        # ✅ REMOVED: HIGH-CONFIDENCE INTENTS BYPASS 
+        # All intents now follow proper GPT-FIRST → VAGUE-FALLBACK → CONTEXT-ENHANCED flow
+        # Intent detection is logged but doesn't trigger automatic responses
+        
+        # 🔧 UX FIX: Handle "speak to someone" requests without assumptions
+        speak_to_someone_patterns = [
+            "i want to speak to someone", "want to speak to someone", "talk to someone", 
+            "speak to a person", "talk to a person", "human agent", "real person",
+            "אני רוצה לדבר עם מישהו", "רוצה לדבר עם מישהו", "לדבר עם נציג", "אדם אמיתי"
+        ]
+        if any(pattern in question.lower() for pattern in speak_to_someone_patterns):
+            logger.info(f"[SPEAK_TO_SOMEONE] Detected request to speak to someone")
+            speak_response = self._generate_intelligent_response("speak_to_someone", question, session)
+            if speak_response:
+                session["history"].append({"role": "assistant", "content": speak_response})
+                return speak_response, session
+        
         # Note: Response variation is handled by the existing ResponseVariationService
         # which is already integrated and working properly
         
@@ -107,7 +139,7 @@ class ChatService:
             goodbye_patterns = ["תודה", "תודה רבה", "ביי", "להתראות", "שיהיה לך יום טוב", "thank you", "thanks", "bye", "goodbye", "have a good day"]
             if any(pattern in question_lower for pattern in goodbye_patterns):
                 logger.info(f"[LEAD_COMPLETED] Goodbye/thank you detected - providing warm closure")
-                lang = detect_language(question)
+                # Using already detected lang
                 if lang == "he":
                     final_message = "תודה לך! אנחנו כאן אם תצטרך משהו נוסף. שיהיה לך יום נהדר! 😊"
                 else:
@@ -118,7 +150,7 @@ class ChatService:
             lead_status_keywords = ["lead", "contact", "details", "when", "call", "email", "phone", "פרטים", "מתי", "אימייל", "טלפון", "חזרה", "נציג", "representative"]
             if any(keyword in question_lower for keyword in lead_status_keywords):
                 logger.info(f"[LEAD_COMPLETED] User asking about lead status - providing status update")
-                lang = detect_language(question)
+                # Using already detected lang
                 if lang == "he":
                     final_message = "מעולה! כבר קיבלנו את הפרטים שלך ונציג מצוות Atarize יחזור אליך בהקדם. אתה בתור! 😊"
                 else:
@@ -195,10 +227,12 @@ class ChatService:
             session["specific_use_case"] = specific_use_case
             logger.info(f"[CONTEXT] Specific use case detected: {specific_use_case} (for information only)")
         
-        # Detect positive engagement
+        # ✅ ENHANCED: Detect positive engagement with improved satisfaction recognition
         if self._detect_positive_engagement(question):
             session["positive_engagement"] = True
-            logger.info(f"[CONTEXT] Positive engagement detected")
+            # ✅ NEW: Track consecutive positive engagement for stronger lead signals
+            session["positive_engagement_count"] = session.get("positive_engagement_count", 0) + 1
+            logger.info(f"[ENGAGEMENT] Positive engagement detected (count: {session['positive_engagement_count']})")
         
         # Detect conversation context for follow-up questions
         contextual_intent, context_info = self._get_conversation_context(question, session)
@@ -428,29 +462,48 @@ class ChatService:
             
             answer = self._generate_ai_response_with_enhanced_context(question, session, context, is_simple_question)
             
+            # 🔧 FIX 4: IMPROVED VAGUE GPT FALLBACK WITH CHROMA RETRY
             if not answer or is_vague_gpt_answer(answer):
-                logger.info(f"[CHAT_SERVICE] Vague response generated - trying alternative approach")
-                # Try to generate a more helpful response instead of immediately going to lead collection
-                alternative_response = self._generate_intelligent_response("helpful_alternative", question, session)
-                if alternative_response and not is_vague_gpt_answer(alternative_response):
-                    answer = alternative_response
-                    logger.info(f"[CHAT_SERVICE] Generated better alternative response")
-                    # Mark that we provided helpful information
+                logger.info(f"[VAGUE_FALLBACK] Vague GPT response detected - trying Chroma fallback")
+                
+                # First try: Get the best semantic match from Chroma and generate GPT response with it
+                context_fallback = self._get_context_from_chroma(question, "general")
+                if context_fallback and len(context_fallback.strip()) > 100:
+                    logger.info(f"[VAGUE_FALLBACK] ✅ Retrieved Chroma context ({len(context_fallback)} chars) - generating GPT response")
+                    # ✅ FIXED: Use GPT with Chroma context instead of raw Chroma content
+                    answer = self._generate_ai_response_with_enhanced_context(question, session, context_fallback, is_simple_question)
+                    # 🔧 FIX 3: CLEAN SESSION FLAGS after successful fallback
+                    session.pop("interested_lead_pending", None)
+                    session.pop("lead_request_count", None)
                     self._mark_information_provided(session)
                 else:
-                    # Only trigger lead collection if we have provided some information first
-                    if session.get("information_provided", False) or session.get("helpful_responses_count", 0) >= 1:
-                        logger.info(f"[CHAT_SERVICE] Could not generate helpful response - offering assistance after providing info")
-                        session["interested_lead_pending"] = True
-                        assistance_response = self._generate_intelligent_response("vague_gpt_response", question, session)
-                        session["history"].append({"role": "assistant", "content": assistance_response})
-                        return assistance_response, session
+                    # Second try: Generate alternative response
+                    alternative_response = self._generate_intelligent_response("helpful_alternative", question, session)
+                    if alternative_response and not is_vague_gpt_answer(alternative_response):
+                        answer = alternative_response
+                        logger.info(f"[VAGUE_FALLBACK] ✅ Generated better alternative response")
+                        self._mark_information_provided(session)
                     else:
-                        # Provide a generic helpful response instead of immediately asking for details
-                        logger.info(f"[CHAT_SERVICE] Providing generic helpful response instead of lead collection")
-                        generic_response = "אני אשמח לעזור לך! בואו נדבר על איך Atarize יכולה לעזור לעסק שלך. מה מעניין אותך לדעת?"
-                        session["history"].append({"role": "assistant", "content": generic_response})
-                        return generic_response, session
+                        # Only trigger lead collection if we have provided some information first
+                        if session.get("information_provided", False) or session.get("helpful_responses_count", 0) >= 1:
+                            logger.info(f"[VAGUE_FALLBACK] Could not generate helpful response - offering assistance after providing info")
+                            session["interested_lead_pending"] = True
+                            assistance_response = self._generate_intelligent_response("vague_gpt_response", question, session)
+                            session["history"].append({"role": "assistant", "content": assistance_response})
+                            return assistance_response, session
+                        else:
+                            # ✅ FIXED: Generate helpful response via GPT instead of hardcoded text
+                            logger.info(f"[VAGUE_FALLBACK] Generating helpful response via GPT instead of lead collection")
+                            gpt_helpful_response = self._generate_intelligent_response("helpful_fallback", question, session)
+                            if gpt_helpful_response:
+                                session["history"].append({"role": "assistant", "content": gpt_helpful_response})
+                                return gpt_helpful_response, session
+                            else:
+                                # Final fallback only if GPT generation fails
+                                logger.warning(f"[VAGUE_FALLBACK] GPT generation failed - using minimal fallback")
+                                minimal_response = self._generate_ai_response("אני כאן לעזור לך! איך אני יכולה לסייע?", session)
+                                session["history"].append({"role": "assistant", "content": minimal_response})
+                                return minimal_response, session
             
             # Mark that helpful information was provided (if we have a good answer)
             if answer and not is_vague_gpt_answer(answer):
@@ -463,6 +516,20 @@ class ChatService:
                 if lead_message:
                     answer = f"{answer}\n\n{lead_message}"
             
+            # ✅ ENHANCED: Check for high engagement that warrants immediate lead collection
+            elif self._should_initiate_lead_collection_from_engagement(session) and answer:
+                logger.info(f"[LEAD_TRANSITION] 🎯 High engagement detected - initiating natural lead collection")
+                # ✅ GPT-FIRST: Generate natural lead collection transition via GPT
+                lead_transition = self._generate_intelligent_response("high_engagement_lead_collection", question, session)
+                if lead_transition:
+                    answer = f"{answer}\n\n{lead_transition}"
+                    session["interested_lead_pending"] = True
+                else:
+                    # Fallback to assistance offer if GPT generation fails
+                    assistance_offer = self._generate_assistance_offer(question, session, lang)
+                    if assistance_offer:
+                        answer = f"{answer}\n\n{assistance_offer}"
+                        session["interested_lead_pending"] = True
             # If product-market fit was detected (and no buying intent), add helpful offer to the answer
             elif product_market_fit_detected and answer:
                 logger.info(f"[LEAD_TRANSITION] Adding helpful assistance offer to answer")
@@ -676,42 +743,71 @@ class ChatService:
         # Get context from Chroma for better responses
         context = self._get_context_from_chroma(user_input, context_type)
         
-        # 🚀 PERFORMANCE: Check cache first for fast response
-        cached_response = self.cache_manager.get(f"{context_type}:{user_input}", session)
+        # 🔧 UX FIX: Simplified cache for faster lookup
+        cache_key = f"{context_type}:{user_input[:50]}"  # Shortened key for performance
+        cached_response = self.cache_manager.get(cache_key, session)
         if cached_response:
-            logger.info(f"[CACHE_HIT] Fast cached response for {context_type}: '{user_input[:30]}...'")
+            logger.info(f"[CACHE_HIT] Fast cached response for {context_type}")
             return cached_response
+        
+        # 🔧 QA FIX: Add explicit language consistency instruction
+        lang_instruction = "ענה רק בעברית ולא בשפות אחרות." if lang == "he" else "Respond only in English and no other languages."
         
         # Build context-specific prompt
         if context_type == "vague_input":
             if lang == "he":
-                context_prompt = f"המשתמש שלח הודעה קצרה או לא ברורה: '{user_input}'. תענה בחום ותבקש ממנו לפרט מה הוא מחפש. הקשר רלוונטי: {context}"
+                context_prompt = f"המשתמש שלח הודעה קצרה או לא ברורה: '{user_input}'. תענה בחום ותבקש ממנו לפרט מה הוא מחפש. {lang_instruction} הקשר רלוונטי: {context}"
             else:
-                context_prompt = f"User sent a vague or short message: '{user_input}'. Respond warmly and ask them to clarify what they're looking for. Relevant context: {context}"
+                context_prompt = f"User sent a vague or short message: '{user_input}'. Respond warmly and ask them to clarify what they're looking for. {lang_instruction} Relevant context: {context}"
         
         elif context_type == "vague_gpt_response":
+            # 🔧 UX FIX: Shortened vague response prompts
             if lang == "he":
-                context_prompt = f"לא הצלחתי למצוא תשובה טובה לשאלה: '{user_input}'. תסביר בנימוס שאני רוצה לעזור אך צריך יותר פרטים. הקשר רלוונטי: {context}"
+                context_prompt = f"תסביר קצר שאת רוצה לעזור אך צריך יותר פרטים על '{user_input}'. {lang_instruction}"
             else:
-                context_prompt = f"I couldn't find a good answer for: '{user_input}'. Politely explain that I want to help but need more details. Relevant context: {context}"
+                context_prompt = f"Briefly explain you want to help but need more details about '{user_input}'. {lang_instruction}"
         
         elif context_type == "technical_error":
+            # 🔧 UX FIX: Shortened error prompts
             if lang == "he":
-                context_prompt = f"התרחשה שגיאה טכנית בעת עיבוד השאלה: '{user_input}'. תתנצל בנימוס ותציע פתרונות חלופיים. הקשר רלוונטי: {context}"
+                context_prompt = f"תתנצל קצר על שגיאה בעיבוד '{user_input}' ותציע עזרה. {lang_instruction}"
             else:
-                context_prompt = f"A technical error occurred processing: '{user_input}'. Apologize politely and offer alternative solutions. Relevant context: {context}"
+                context_prompt = f"Briefly apologize for error processing '{user_input}' and offer help. {lang_instruction}"
         
         elif context_type == "helpful_alternative":
+            # 🔧 UX FIX: Shortened alternative prompts
             if lang == "he":
-                context_prompt = f"המשתמש שאל: '{user_input}'. תנסה לספק תשובה מועילת ומידע רלוונטי על השירות, גם אם התשובה הקודמת לא הייתה טובה. השתמש בהקשר הזה: {context}"
+                context_prompt = f"תענה מועיל וקצר לשאלה '{user_input}'. {lang_instruction}"
             else:
-                context_prompt = f"User asked: '{user_input}'. Try to provide a helpful answer and relevant information about the service, even if the previous response wasn't good. Use this context: {context}"
+                context_prompt = f"Answer '{user_input}' helpfully and briefly. {lang_instruction}"
         
         elif context_type == "lead_request":
+            # 🔧 UX FIX: Shortened lead request prompts
             if lang == "he":
-                context_prompt = f"המשתמש בתהליך איסוף פרטים. תבקש ממנו בנימוס להשאיר שם, טלפון ואימייל כדי שנוכל לחזור אליו. הקשר רלוונטי: {context}"
+                context_prompt = f"תבקש בנימוס שם, טלפון ואימייל. {lang_instruction}"
             else:
-                context_prompt = f"User is in lead collection process. Politely ask them to share their name, phone, and email so we can follow up. Relevant context: {context}"
+                context_prompt = f"Politely ask for name, phone, and email. {lang_instruction}"
+        
+        elif context_type == "high_engagement_lead_collection":
+            # 🔧 UX FIX: Shortened prompts for faster, more concise responses
+            if lang == "he":
+                context_prompt = f"המשתמש מתלהב מהשירות. תענה קצר לשאלה '{user_input}', ואז תבקש בטבעיות שם, טלפון ואימייל. {lang_instruction}"
+            else:
+                context_prompt = f"User is enthusiastic about the service. Answer '{user_input}' briefly, then naturally ask for name, phone, and email. {lang_instruction}"
+        
+        elif context_type == "speak_to_someone":
+            # 🔧 UX FIX: Handle vague "speak to someone" requests without assumptions
+            if lang == "he":
+                context_prompt = f"המשתמש רוצה לדבר עם מישהו: '{user_input}'. תענה קצר ותשאל מה המטרה או איך אפשר לעזור, בלי להניח הנחות על העסק שלו. {lang_instruction}"
+            else:
+                context_prompt = f"User wants to speak to someone: '{user_input}'. Respond briefly and ask what they need help with, without making assumptions about their business. {lang_instruction}"
+        
+        elif context_type == "helpful_fallback":
+            # 🔧 UX FIX: Shortened fallback prompts
+            if lang == "he":
+                context_prompt = f"תענה מועיל וקצר לשאלה '{user_input}', תציע עזרה. {lang_instruction}"
+            else:
+                context_prompt = f"Answer '{user_input}' helpfully and briefly, offer assistance. {lang_instruction}"
         
         try:
             # Create messages for OpenAI
@@ -1140,7 +1236,7 @@ Provide a response that is appropriate for the user's actual business type."""
             return self._generate_ai_response(question, session)
 
     def _get_context_from_chroma(self, question, context_type="general"):
-        """⚡ OPTIMIZED context retrieval from Chroma database"""
+        """🔧 ENHANCED: Combined intent + semantic context retrieval (called during vague response fallback)"""
         try:
             # 🚀 PERFORMANCE: Check database cache first for fast context retrieval
             query_key = f"{question}:{context_type}"
@@ -1155,32 +1251,51 @@ Provide a response that is appropriate for the user's actual business type."""
                 logger.warning("[CONTEXT] No knowledge collection available")
                 return ""
             
-            # ⚡ OPTIMIZED: Ultra-fast query with minimal results
-            results = knowledge_collection.query(
-                query_texts=[question[:100]],  # Limit query length for speed
-                n_results=1,  # Single best result for fastest retrieval
-                include=["documents", "metadatas"]  # Only include what we need
-            )
+            # 🔧 COMBINED RETRIEVAL: Intent + Semantic approach for better context
+            combined_context = ""
             
-            if not results or not results['documents']:
-                logger.debug("[CONTEXT] No relevant context found")
+            # STEP 1: Try intent-based retrieval first (if we can detect intent)
+            from services.intent_service import IntentService
+            intent_service = IntentService(self.db_manager)
+            intent_name = intent_service.detect_intent_chroma(question)
+            
+            if intent_name and intent_name != "unknown":
+                logger.debug(f"[COMBINED_CONTEXT] Detected intent: {intent_name} - getting intent-based docs")
+                intent_docs = self._get_knowledge_by_intent(intent_name)
+                if intent_docs:
+                    # Use the first (best) intent document
+                    best_intent_doc = intent_docs[0][0] if intent_docs[0] else ""
+                    if best_intent_doc and len(best_intent_doc.strip()) > 100:
+                        combined_context = best_intent_doc[:500]  # Limit for performance
+                        logger.info(f"[COMBINED_CONTEXT] ✅ Using intent-based context ({len(combined_context)} chars)")
+            
+            # STEP 2: If no good intent context, fall back to semantic search
+            if not combined_context:
+                logger.debug(f"[COMBINED_CONTEXT] No intent context found, using semantic search")
+                results = knowledge_collection.query(
+                    query_texts=[question[:100]],  # Limit query length for speed
+                    n_results=1,  # Single best result for fastest retrieval
+                    include=["documents", "metadatas"]  # Only include what we need
+                )
+                
+                if results and results['documents']:
+                    doc = results['documents'][0][0] if results['documents'][0] else ""
+                    combined_context = doc[:500] if doc else ""  # Limit context length for speed
+                    logger.info(f"[COMBINED_CONTEXT] ✅ Using semantic context ({len(combined_context)} chars)")
+            
+            # STEP 3: Final fallback if still no context
+            if not combined_context:
+                logger.debug("[COMBINED_CONTEXT] No relevant context found")
                 return ""
             
-            # ⚡ ULTRA-FAST: Simplified context building with single result
-            doc = results['documents'][0][0] if results['documents'][0] else ""
-            metadata = results['metadatas'][0][0] if results['metadatas'] and results['metadatas'][0] else {}
-            
-            # Simple, fast context format - just the document
-            context = doc[:500] if doc else ""  # Limit context length for speed
-            logger.info(f"[CONTEXT] ⚡ Ultra-fast retrieved context ({len(context)} chars)")
-            
             # 💾 PERFORMANCE: Cache context for future fast retrieval
-            self.cache_manager.cache_db_query(query_key, context, ttl=2400)  # 40 minutes TTL
+            self.cache_manager.cache_db_query(query_key, combined_context, ttl=2400)  # 40 minutes TTL
             
-            return context
+            logger.info(f"[COMBINED_CONTEXT] ✅ Final context delivered ({len(combined_context)} chars)")
+            return combined_context
             
         except Exception as e:
-            logger.error(f"[CONTEXT] Error getting context from Chroma: {e}")
+            logger.error(f"[COMBINED_CONTEXT] Error getting context from Chroma: {e}")
             return ""
     
     def get_cache_stats(self):
@@ -1499,22 +1614,61 @@ Provide a response that is appropriate for the user's actual business type."""
         
         return None
 
+    def _should_initiate_lead_collection_from_engagement(self, session):
+        """✅ ENHANCED: Determine if high engagement warrants immediate lead collection"""
+        # Check for strong positive engagement signals
+        positive_count = session.get("positive_engagement_count", 0)
+        has_recent_positive = session.get("positive_engagement", False)
+        info_provided = session.get("information_provided", False)
+        helpful_count = session.get("helpful_responses_count", 0)
+        
+        # ✅ HIGH ENGAGEMENT CRITERIA:
+        # 1. Multiple positive engagement signals OR
+        # 2. Strong single engagement + information provided OR  
+        # 3. High satisfaction after helpful responses
+        high_engagement = (
+            positive_count >= 2 or  # Multiple positive responses
+            (has_recent_positive and info_provided and helpful_count >= 1) or  # Satisfied after getting info
+            (has_recent_positive and helpful_count >= 2)  # Satisfied after multiple helpful responses
+        )
+        
+        # Don't interrupt if already collecting leads
+        already_collecting = session.get("interested_lead_pending", False) or session.get("lead_collected", False)
+        
+        if high_engagement and not already_collecting:
+            logger.info(f"[HIGH_ENGAGEMENT] 🎯 Criteria met for lead collection - positive_count: {positive_count}, info_provided: {info_provided}, helpful_count: {helpful_count}")
+            return True
+        
+        return False
+
     def _detect_positive_engagement(self, text):
         """Detect when user shows positive engagement or interest"""
         text_lower = text.strip().lower()
         
-        # Positive engagement patterns in Hebrew
+        # ✅ ENHANCED: Positive engagement patterns in Hebrew (including excitement expressions)
         positive_patterns_he = [
             "זה נשמע טוב", "זה מעניין", "אני מעוניין", "אני רוצה", "זה בדיוק מה שאני צריך",
             "זה יכול לעזור", "זה נראה טוב", "אני אוהב את זה", "זה נהדר", "זה מושלם",
-            "כן", "בטח", "אפשר", "למה לא", "בואו ננסה", "אני רוצה לנסות"
+            "כן", "בטח", "אפשר", "למה לא", "בואו ננסה", "אני רוצה לנסות",
+            # ✅ NEW: High excitement and satisfaction expressions
+            "אה וואו", "מהמם", "וואו", "איזה כיף", "זה מדהים", "פנטסטי", "מושלם",
+            "בדיוק מה שחיפשתי", "זה נראה מדהים", "אני נרגש", "אני מתרגש", "זה בטח יעזור לי",
+            "אני חייב את זה", "זה בדיוק מה שאני צריך", "זה יכול לשנות הכל", "זה גאוני"
         ]
         
-        # Positive engagement patterns in English
+        # ✅ ENHANCED: Positive engagement patterns in English (including excitement expressions)  
         positive_patterns_en = [
             "sounds good", "interesting", "i'm interested", "i want", "this is exactly what i need",
             "this could help", "this looks good", "i like this", "this is great", "this is perfect",
-            "yes", "sure", "okay", "why not", "let's try", "i want to try"
+            "yes", "sure", "okay", "why not", "let's try", "i want to try",
+            # ✅ NEW: High excitement and satisfaction expressions
+            "oh wow", "amazing", "awesome", "fantastic", "incredible", "brilliant", "excellent",
+            "that's exactly what I was looking for", "this looks amazing", "I'm excited", "I love it",
+            "I need this", "this could change everything", "this is genius", "impressive",
+            # 🔧 QA FIX: Missing business enthusiasm patterns
+            "perfect for my business", "sounds perfect", "exactly what my business needs",
+            "this is perfect for us", "perfect solution", "ideal for my company",
+            "this fits perfectly", "exactly what we're looking for", "this would be great for us"
         ]
         
         # Check for positive engagement
