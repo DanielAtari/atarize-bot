@@ -96,7 +96,7 @@ const App = () => {
       <footer className="border-t border-border bg-muted/20 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center text-muted-foreground">
-            <p>כל הזכויות שמורות © 2024 Atarize</p>
+            <p>כל הזכויות שמורות © 2025 Atarize</p>
           </div>
         </div>
       </footer>

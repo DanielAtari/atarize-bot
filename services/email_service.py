@@ -13,6 +13,12 @@ class EmailService:
         self.email_pass = os.getenv("EMAIL_PASS")
         self.email_target = os.getenv("EMAIL_TARGET")
         
+        # Debug logging
+        logger.info(f"📧 Email service initialized:")
+        logger.info(f"   EMAIL_USER: {self.email_user}")
+        logger.info(f"   EMAIL_PASS: {'*' * len(self.email_pass) if self.email_pass else 'None'}")
+        logger.info(f"   EMAIL_TARGET: {self.email_target}")
+        
     def send_email_notification(self, subject, message):
         """Send email notification for leads"""
         logger.info(f"📧 Attempting to send email...")

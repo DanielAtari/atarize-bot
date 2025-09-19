@@ -60,9 +60,9 @@ const PricingSection = () => (
     <div className="text-sm text-muted-foreground mt-4 p-4 bg-muted/50 rounded-lg">
       <strong>סה"כ הפעלה ראשונית:</strong><br/>
       מחיר רגיל: ₪890 (₪690 + ₪200)<br/>
-      <span className="text-primary font-bold">מחיר השקה: ₪590 (₪390 + ₪200)</span>
+      <span className="text-red-600 font-bold">מחיר השקה: ₪590 (₪390 + ₪200)</span>
     </div>
-    <div className="text-lg text-primary font-bold mt-6">⚠️ מחיר השקה - ללקוחות ראשונים בלבד!</div>
+    <div className="text-lg text-red-600 font-bold mt-6">⚠️ מחיר השקה - ללקוחות ראשונים בלבד!</div>
   </section>
 );
 

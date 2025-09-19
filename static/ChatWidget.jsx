@@ -6,13 +6,15 @@ const ChatWidget = () => {
       id: 1,
       text: "נסו אותי ↓",
       isBot: true,
+      isClickable: true,
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Ref for the messages container
+  // Ref for the messages container and input
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   // Scroll to bottom when messages change or loading changes
   useEffect(() => {
@@ -20,6 +22,19 @@ const ChatWidget = () => {
       messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
     }
   }, [messages, loading]);
+
+  // Handle click on "נסו אותי" message
+  const handleTryMeClick = () => {
+    // Focus on input field
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+    // Scroll to input area smoothly
+    const inputContainer = inputRef.current?.parentElement?.parentElement;
+    if (inputContainer) {
+      inputContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  };
 
   // פונה לשרת Flask שלך לקבלת תשובה מהבוט
 // שולף תשובת בוט מהשרת (מותאם ל-local ול-production)
@@ -107,7 +122,14 @@ const fetchBotReply = async (message) => {
       <div ref={messagesEndRef} className="flex-1 p-4 space-y-4 overflow-y-auto">
         {messages.map((message) => (
           <div key={message.id} className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`} dir="rtl">
-            <div className={`chat-bubble ${message.isBot ? 'bot text-left' : 'user text-right'} px-4 py-3`}> {message.text} </div>
+            <div 
+              className={`chat-bubble ${message.isBot ? 'bot text-left' : 'user text-right'} px-4 py-3 ${
+                message.isClickable ? 'cursor-pointer hover:opacity-80 transition-opacity font-bold' : ''
+              }`}
+              onClick={message.isClickable ? handleTryMeClick : undefined}
+            > 
+              {message.text} 
+            </div>
           </div>
         ))}
         {loading && <LoadingDots />}
@@ -117,6 +139,7 @@ const fetchBotReply = async (message) => {
       <div className="p-4 border-t border-border rounded-b-xl">
         <form onSubmit={handleSendMessage} className="flex flex-row items-center gap-2">
           <input
+            ref={inputRef}
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
